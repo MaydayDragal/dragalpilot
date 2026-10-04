@@ -71,3 +71,19 @@ One dated entry per session, including research-only sessions. Times are America
   - ~304 s engaged at 6-72 mph with no steer faults, no saturation, and no clear oscillation (preliminary).
   - Safety replay with real TX: no unsafe TX. The 9 blocked CANCEL buttons on route 3 are explained.
   - CPU stays within baseline. Low-speed behaviour and tune quality are still unvalidated.
+
+## 2026-10-04: Session 3, morning drives: steering tune and hands-on warnings
+
+- Workspace confirmed: outer `main` @ `5d57a93`, clean, nothing unpushed; `sunnypilot/` `dragal/custom` @ `7e9d0755d9`, clean; data root UniqueId OK, ~269 GB free.
+- User report: stage C clean. Stage D: steering ping-pongs (oversteers into curves, then corrects), a few "driver engagement" alerts, micd/soundd crash again.
+- Device access (user-authorized to connect and download logs and videos; device at .104, offroad, indoors, no other SSH session):
+  - Three sequential read-only SSH sessions (listing; pull; steering params). No device changes.
+  - Pulled 3 new routes (`00000005`–`00000007`, 09:47–10:25 EDT): rlogs + `fcamera`/`ecamera`, 114 files, all sha256 MATCH. Promoted to `recordings/2026/10/04/` with provenance.
+- Camera-to-filename mapping verified against `loggerd.h` and recorded in `docs/local-storage.md`.
+- Findings ([docs/findings/2026-10-04-g70-drives-tune.md](docs/findings/2026-10-04-g70-drives-tune.md)):
+  - The device runs `LatControlTorqueV0` (source fact).
+  - `torqued` estimates latAccelFactor ~4.0–4.5 and friction ~0.07, vs the port's 2.7 / 0.11, and it can never exceed 3.51 because of its ±30% clip (source fact). Curve data agrees (roll-corrected ~3.5–4.7). This is consistent with over-strong feedforward → overshoot and correction.
+  - `paramsd` steerRatio ~14.1 (port 12.9); `lagd` delay ~0.17 s.
+  - The "engagement" alerts did not come from sunnypilot: no DM alerts, no openpilot hands-on requests. The stock camera raised 4 LFA hands-off warnings while openpilot steered. The path to the cluster is unconfirmed (related to excluded panda PR #2045).
+  - Real panda: no faults, 0 invalid rx, ≤4 blocked tx per route; no steer faults. CPU within baseline.
+- No code changes. QA: not applicable (analysis only). A tune change will be proposed as a separate bounded change.
