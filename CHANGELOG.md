@@ -185,3 +185,54 @@ One dated entry per session, including research-only sessions. Times are America
   1. The low-speed session runs first and does the single device pull: the new drives' rlogs + videos, plus videos of routes 3, 4, 8, 9.
   2. The video lane-check session starts after that pull and runs offline in parallel.
   - Both sessions follow shared-file and commit etiquette.
+
+## 2026-10-04: Session 4b, low-speed drives (pull and analysis)
+
+- Workspace confirmed:
+  - outer `main` = `origin/main` @ `6afe57e`, clean;
+  - `sunnypilot/` `dragal/custom` @ `82f58a9a8c`, clean;
+  - data root UniqueId OK, write probe OK, ~265 GB free;
+  - no local ssh/scp processes.
+- **Device pull** (user-confirmed: `.104`, not driving, indoors, no other SSH session). One read-only SSH connection, 18:49:57Z–18:56:09Z. Listing, on-device sha256 and the tar stream all ran in that connection (`IsOffroad=1` checked by the script). Script: `E:\DragalPilot\scratch\device\pull_lowspeed_20261004.sh`; log: `E:\DragalPilot\logs\device-pull-20261004d.log`.
+  - New routes `0000000a`–`0000000e`: rlog + fcamera + ecamera.
+  - Videos (fcamera/ecamera) for routes 3, 4, 8, 9. All of them were still on the device. Segment 9 of route 4 and segment 4 of route 9 are 0-byte files, kept as received.
+  - 258 files, 7.88 GB: all sha256 MATCH after extraction and after promotion (move). No connection is open.
+  - Promoted to `recordings/2026/10/04/` with provenance:
+    - `13-51-50__0000000a`, `14-04-39__0000000b` (engaged);
+    - `14-16-31__0000000c` (manual, openpilot on);
+    - `14-28-03__0000000e` (manual, `OpenpilotEnabledToggle=0`, so dashcam mode / `noOutput` by design, card.py L133–138).
+  - `0000000d` (8 s, no GPS fix, unsynced clock) is in `recordings/undated/`, bounded to 14:27:22–14:28:04 EDT.
+  - The staging folder `temporary/device-pull-20261004d/` still holds `pull.tar` (7.9 GB duplicate). It will be deleted only with user approval.
+- Analysis ([docs/findings/2026-10-04-g70-lowspeed-drives.md](docs/findings/2026-10-04-g70-lowspeed-drives.md)). By GPS, the four drives cover the same loop: engaged `0a`/`0b`, manual `0c`/`0e`. Sections: 25–30 mph without confident lane lines; 30–35 mph with lines; 35–55 mph; highway.
+  - **Controller at 25–35 mph:** it follows the model's plan in the slow band (gain 0.95–0.97, phase −7°, coherence 0.99). The fast-band sway is within the range of the manual runs. There's no sign of low-speed oscillation from the higher KP.
+  - **Slow-band path difference** (lane-line independent, odometer + GPS aligned):
+    - With lane lines, and on the highway, engaged differs from the human no more than the two human runs differ from each other.
+    - At 25–30 mph without lines, it differs 1.06–2.0× more. The two engaged runs agree closely (0.075 m), so this is a repeatable model path choice.
+    - The largest difference is 0.4–0.7 m further left than the human, where a left-turn bay opens on a road with no right edge line (video context, approximate alignment).
+    - There is no extra curve-cutting relative to the human at low speed.
+  - Stop-and-go behind a lead is essentially absent from the data, so the main complaint is still not covered.
+  - Where lines are confident, the human sits 5–8 cm left of centre and engaged −4…+1 cm. The curve shift vs a human is inconclusive (too little data).
+  - `torqued`: still not valid (calPerc 70). The limiting bucket is at 38/100, so roughly 1.3 h more highway driving.
+  - Bus-1 start-up burst: on every route since the firmware change. The sticky `interruptRateCan2` bit is set on some boots only (0c, 0d→0e), depending on the peak rate.
+  - Route 0b's safety-replay "blocked" count is a replay artifact: the real panda blocked 0 in Hyundai mode.
+  - No steer faults; CPU within baseline.
+- Scripts: `E:\DragalPilot\scratch\wsl\`.
+  - New: `lowspeed_timeline.py`, `lowspeed_drives.py`, `s4b_*.py`.
+  - `lane_drift_extract.py` gained lead and steer-torque fields; the old version is kept as `.session4a.py.bak`.
+  - Outputs: `E:\DragalPilot\analysis\g70-lowspeed-20261004\`. Logs: `E:\DragalPilot\logs\s4b-*.log`.
+- No code or device changes. QA: not applicable (analysis only). Recommendation: no software change. Next data: stop-and-go engaged + manual, and the user's description of where the swing is felt.
+- **Follow-up, the user's weave** (~3 s per cycle, the wheel visibly moves, a few inches, occasional, no specific places). It matches a steering-loop effect at 0.3–0.6 Hz, not the slow path difference. Analysis (`s4b_loop_xfer.py`, `s4b_weave.py`):
+  - In 0.3–0.6 Hz, the car's motion is 1.05–1.9× the requested lateral accel, lagging 24–48°, at all speeds, before and after the tune. Two links contribute:
+    - controller/EPS 0.96–1.38×;
+    - vehicle yaw vs the steering-angle model 1.04–1.35×.
+  - The control-error spectrum peaks at 0.30–0.40 Hz on route 8 and on 0a/0b above 35 mph.
+  - The tune fixed only the low-frequency over-torque.
+  - Source fact: V0's error = current desired − measurement, so it contains the actuator delay (`latcontrol_torque_v0.py` L79–92). Upstream v1 uses the delayed setpoint.
+  - The `EnforceTorqueControl` toggle that selects v1 also changes the torque tune and `torqued` behaviour.
+  - Hypothesis: a lightly damped steering loop.
+  - The earlier "no software change" recommendation is superseded for the weave.
+  - Proposed: offline plant identification + closed-loop simulation (V0 / V0 with a delay-free error / v1) with criteria, before any device change. Not started; user decision.
+- Before a user-requested VM reboot (~15:45 EDT):
+  - No background processes were running; no SSH connection is open.
+  - Wrote handoff/kickoff `docs/sessions/2026-10-04-s4b-lowspeed-weave-*` and updated the sessions index.
+  - Docs are uncommitted, pending the user's decision. QA: not applicable (analysis only). Token usage reporting not available.
