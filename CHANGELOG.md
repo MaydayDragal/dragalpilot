@@ -50,3 +50,8 @@ One dated entry per session, including research-only sessions. Times are America
   - Alpha long stays as upstream (no `UNSUPPORTED_LONGITUDINAL`). The user won't enable the toggle.
   - The car has Harness F, so the docs entry is now `hyundai_f` (`dragal/custom` @ **`7e9d0755d9`**, docs-only).
   - User preference: no targeted test re-runs for docs-only commits.
+- Deployment proposal drafted: [docs/proposals/2026-10-04-g70-2024-deploy.md](docs/proposals/2026-10-04-g70-2024-deploy.md). **Not authorized.**
+  - Basis: confirmed updater and launcher behaviour (`updated.py`, `launch_chffrplus.sh`) and the cache rules in `fingerprint()`.
+  - Artifact: a git bundle of `7e9d0755d9` (sha256 `bf73cc…3d16`). The install/rollback dry run passed in WSL.
+  - Device-load baseline from existing rlogs (CPU mean 53–82%, p95 80–88%). New data-root folder `deploy/`.
+- No device access this session.

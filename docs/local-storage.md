@@ -39,10 +39,11 @@ E:\DragalPilot\
     wsl/Ubuntu-24.04/ext4.vhdx   WSL test environment disk (venv, uv cache, test clone; see docs/baseline.md)
   scratch/        throwaway working files
   temporary/      partial transfers, staging before verification
+  deploy/         deployment artifacts (bundles, dry-run logs, device pre/post-state) per deployment
   logs/           tool/transfer/clone logs (added at setup: keeps command logs out of the repo and out of the recordings tree)
 ```
 
-Only `logs/` departs from the kickoff layout. The reason is given beside it above.
+`logs/`, `deploy/` and `recordings/undated/` depart from the kickoff layout. The reasons are given beside them above.
 
 ## Recording rules
 
