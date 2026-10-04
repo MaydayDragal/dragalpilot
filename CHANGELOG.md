@@ -236,3 +236,25 @@ One dated entry per session, including research-only sessions. Times are America
   - No background processes were running; no SSH connection is open.
   - Wrote handoff/kickoff `docs/sessions/2026-10-04-s4b-lowspeed-weave-*` and updated the sessions index.
   - Docs are uncommitted, pending the user's decision. QA: not applicable (analysis only). Token usage reporting not available.
+
+## 2026-10-04: Session 5, video check of the lane-position findings (parallel to 4b)
+
+- Workspace confirmed at start (`main` @ `6afe57e`, `sunnypilot/` `dragal/custom` @ `82f58a9a8c` clean, data root UniqueId OK) and again after the user's VM reboot. The VM was resized to 6 vCPU / 32 GB; WSL now sees 6 CPUs and ~16 GB (default, no `.wslconfig`). No device access.
+- Videos: routes 6/7 from session 3; route 8 from session 4b's pull (`device-pull-20261004d`, all sha256 MATCH, promoted by 4b).
+- Frame alignment verified: `modelV2.frameId` → `narrowRoadEncodeIdx` → `fcamera.hevc` frame. 1200/1200 per segment; every model frame on routes 4 and 6–9 maps.
+- New classical lane-marking measurement, independent of the model: bird's-eye ridge filter + joint parallel-line fit, using the pinned `mici`/os04c10 intrinsics and the logged calibration.
+  - A hand check on random frames found a concrete-seam false detection (v1) → seam suppression (v2), and everything was re-run.
+  - v2 hand check: stripe-centre error RMS ≈ 1.3 cm, max 2.6 cm.
+- Findings ([docs/findings/2026-10-04-g70-video-lane-check.md](docs/findings/2026-10-04-g70-video-lane-check.md)), routes 6/7/8, eligible highway frames:
+  - Lane centre at 12 m: video − model **+0.4 to +0.7 cm**.
+  - Device **0.14–0.20 m left** of centre on straights, by both methods.
+  - Curve-inside shift confirmed: at x = 0 vs Kalman curvature, video 0.40/0.39/0.23 vs model 0.40/0.37/0.24 m per 1/1000 m.
+  - Slow lane-position variation seen by both methods (correlation 0.90–0.97, lag 0).
+  - The model draws its lines 6–9 cm inboard of the paint centres on both sides (its lane is 0.14–0.16 m narrower). The centre is barely affected.
+  - Conclusion: the bias and curve shift are real relative to the paint, i.e. the model's path choice, not perception. The camera and calibration are shared with the model, so the camera's lateral position in the car is not checked.
+- The 24 engaged low-speed windows (routes 4, 6–9), described from video:
+  - intersections, turns, turn-bay openings and unmarked residential streets; none is stop-and-go;
+  - both lines confident < 50% of the time in 11 of 24;
+  - with a close lead and weak lines, the model's lines bend toward the lead (observation).
+- Tools: a separate WSL venv `~/venvs/vid` (OpenCV 5.0.0, numpy 2.5.3, scipy 1.18.1, matplotlib; the checkout `.venv` is untouched). Scripts `E:\DragalPilot\scratch\wsl\vid\`, outputs `E:\DragalPilot\analysis\g70-video-lane-20261004\`, logs `E:\DragalPilot\logs\vid-*.log`.
+- No code or device changes. QA: not applicable (analysis only). Handoff/kickoff `docs/sessions/2026-10-04-s5-video-lane-check-*` (the kickoff is an optional follow-up; 4b's remains the main thread). Token usage reporting not available.
