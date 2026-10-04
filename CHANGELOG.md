@@ -258,3 +258,30 @@ One dated entry per session, including research-only sessions. Times are America
   - with a close lead and weak lines, the model's lines bend toward the lead (observation).
 - Tools: a separate WSL venv `~/venvs/vid` (OpenCV 5.0.0, numpy 2.5.3, scipy 1.18.1, matplotlib; the checkout `.venv` is untouched). Scripts `E:\DragalPilot\scratch\wsl\vid\`, outputs `E:\DragalPilot\analysis\g70-video-lane-20261004\`, logs `E:\DragalPilot\logs\vid-*.log`.
 - No code or device changes. QA: not applicable (analysis only). Handoff/kickoff `docs/sessions/2026-10-04-s5-video-lane-check-*` (the kickoff is an optional follow-up; 4b's remains the main thread). Token usage reporting not available.
+
+## 2026-10-04: Session 6, offline weave simulation (after the session-4b reboot)
+
+- Workspace confirmed:
+  - outer `main` @ `6afe57e` with the uncommitted 4b docs;
+  - `sunnypilot/` `dragal/custom` @ `82f58a9a8c`, clean; WSL clone the same, clean;
+  - E: UniqueId OK, write probe OK, 248 GB free;
+  - no SSH processes.
+  - The VM now has 6 vCPU / 32 GB; WSL gets 6 CPUs / ~15 GB by default, so no `.wslconfig` change was needed.
+- **User decisions:** commit and push the 4b docs (done: `c0b25c1`); delete the duplicate `temporary/device-pull-20261004d/pull.tar` (done: 7.88 GB removed with the empty segment folders, small logs/manifests kept, logged in `logs/promote-20261004d.log`); run the offline weave simulation.
+- The video lane-check session (session 5) ran in parallel and committed `d7fd6b3` locally. This session did not touch its files.
+- **Offline weave simulation** ([docs/findings/2026-10-04-g70-weave-sim.md](docs/findings/2026-10-04-g70-weave-sim.md)). No device access.
+  - **Harness:**
+    - The checkout's own `LatControlTorqueV0` and upstream `LatControlTorque` (v1) run on x86 with the inactive sunnypilot extension stubbed. "v0e" is V0 with its one setpoint line changed.
+    - The source replay reproduces the logged controller (setpoint exact, carOutput exact on 81–95% of cycles).
+    - The fast re-implementation equals the source classes (≤ 6e-8).
+    - Timing found in the logs: the command of cycle k is the carOutput of cycle k+1.
+  - **Plant:** torque → steering-angle lateral accel, identified per speed band on routes 8/0a/0b and held out on 6/7 (VAF 0.91–0.95 held out). It is overdamped, with a 0.2–0.4 Hz corner, 0.02–0.17 s delay and friction. Its dynamic gain is 1.21–1.29× latAccelFactor 4.0 at 35+ mph and 0.89× at 20–35 mph.
+  - **Model check:** at 35+ mph, simulated V0 matches the logged A band gain within ~±0.15 and ~13°, and reproduces the old → new tune drop. At 20–35 mph it misses the 0.4–0.6 Hz gain.
+  - **Result:**
+    - V0 with `setpoint = expected` does not reduce the 0.3–0.6 Hz gain (−0.10 to +0.03), adds 11–21° of lag, and fails the criteria in every band.
+    - Upstream v1 is no better.
+    - **No device change proposed.**
+    - The model points instead to a feedforward-scale/plant-gain mismatch at 35+ mph plus the plant's lag (hypothesis). Matching it (exploratory `v0k`) cut the band gain by 0.07–0.15, but C stays above 1.2 because the vehicle link alone is 1.21–1.34.
+    - The low-speed impression is still unexplained.
+- Scripts `E:\DragalPilot\scratch\wsl\s5\`, outputs `E:\DragalPilot\analysis\g70-weave-sim-20261004\`, logs `E:\DragalPilot\logs\s5-*.log`.
+- No code or device changes. QA: not applicable (analysis only). Token usage reporting not available.

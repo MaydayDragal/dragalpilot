@@ -303,3 +303,14 @@ Log: `s4b-loop-xfer-20261004-153331.log`.
    - no increase in mean |error| above 20%.
 3. **If it passes:** a separate deployment proposal for one bounded code change on `dragal/custom`, scoped to this car, not a global KP change (CLAUDE.md §2). It would carry tests, a focused review, the same loop driven engaged with the same metrics, and a rollback.
    - Using the `EnforceTorqueControl` toggle instead is **not** recommended as the experiment, because it changes several things at once (see the source facts above).
+
+### Result of the offline simulation (session 6, same day)
+
+Full write-up: [2026-10-04-g70-weave-sim.md](2026-10-04-g70-weave-sim.md). Offline model evidence only; no device access.
+
+- **It did not pass.** V0 with `setpoint = expected` (the v1 error definition) changes the 0.3–0.6 Hz gain by only −0.10 to +0.03. It adds 11–21° of lag and fails the criteria in every band. Upstream v1 is no better.
+  - **No device change is proposed.** The "delay in V0's error" hypothesis above is not supported by the model.
+- The identified steering plant is overdamped: a first-order-like lag with a corner at 0.2–0.4 Hz, plus 0.02–0.17 s delay and friction.
+- At 35+ mph its dynamic torque gain is 1.21–1.29× what latAccelFactor 4.0 assumes. In the model, that gain mismatch, together with the lag, makes the feedforward + P overshoot in the weave band.
+  - Matching the feedforward scale to it (exploratory only) cut the band gain by 0.07–0.15. C stayed above 1.2 at 35+ mph, because the vehicle link alone is 1.21–1.34 there.
+- **At 20–35 mph the model under-predicts the logged 0.4–0.6 Hz gain**, so the low-speed impression stays unexplained.
