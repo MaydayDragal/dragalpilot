@@ -124,3 +124,4 @@ One dated entry per session, including research-only sessions. Times are America
   - Post-boot read-only check OK.
   - Record: `docs/proposals/2026-10-04-g70-tune-0x484-deploy.md` § Deployment record.
   - Next: the user's drive per the experiment definition, then an rlog pull and before/after analysis.
+- User decision: the next round of enhancements includes a Hyundai-specific forwarding rule. It blocks the camera's 0x484 without a `check_relay` entry, so there's no relay-malfunction watch on 0x484, closer to the original commaai/panda#2045. It replaces the current `check_relay` entry (needs safety code, tests, coverage, review, firmware rebuild). The user is now driving to test the deployed `82f58a9a8c`.
