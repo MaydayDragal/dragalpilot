@@ -21,4 +21,4 @@ Logs, videos, datasets, analysis outputs and caches are **never** stored in this
 - Baseline: `dev` @ `0b2c431d3abab630df0a32f53236944855a91aa3` (tag `baseline/dev-20261003`), built from master `a5f44653d7f4`.
 - No customizations yet. Customization branch `dragal/custom` (from the `dev` baseline, local only).
 - WSL 2 + Ubuntu 24.04 install in progress (user-approved; dedicated VM).
-- No device access has been authorized or performed.
+- Device: one read-only SSH inspection on 2026-10-03 (user-authorized, inactive device). See docs/findings/
