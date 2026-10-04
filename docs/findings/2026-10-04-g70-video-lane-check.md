@@ -197,3 +197,29 @@ Takeaways:
 - Environment: a separate WSL venv `~/venvs/vid` (Python 3.12.13, opencv-python-headless 5.0.0.93, numpy 2.5.3, scipy 1.18.1, matplotlib 3.11.2; installed with uv; log `logs\vid-venv-setup-*.log`). The checkout's `.venv` was not changed. ffmpeg 6.1.1 (apt).
 - Log extraction used the WSL clone at `82f58a9a8c`.
 - Outputs: `E:\DragalPilot\analysis\g70-video-lane-20261004\` (`*.log.npz`, `*.hw.vid.npz`, `vid_compare.json`, `overlays/`, `debug/`, `lowspeed_windows/`, `validation_*`). Logs: `E:\DragalPilot\logs\vid-*.log`.
+
+## Follow-up (session 7, 2026-10-04): the weave band in the video
+
+The comparison above uses a 20 s moving-average detrend, which passes everything above ~0.05 Hz. It is dominated by the motion below 0.2 Hz and does not isolate the ~3 s weave. This band-limited check reuses the outputs above, read-only.
+
+**Method** (`E:\DragalPilot\scratch\wsl\vid\vid_weave_band.py`; log `logs\vid-weave-band-20261004-165245.log`; output `analysis\g70-video-weave-band-20261004\weave_band.json`):
+- detector-ok eligible highway frames (5 Hz), routes 6, 7 and 8;
+- gaps ≤ 1 s interpolated, runs ≥ 30 s;
+- lane centre at 12 m; 4th-order zero-phase band-pass 0.2–0.6 Hz;
+- Welch cross-spectra with 12.8 s segments;
+- noise floor = band-passed lane-width std / 2 (an upper bound).
+
+An earlier run in this check had an un-normalised spectral RMS and was rerun; coherence, gain and phase were unaffected.
+
+| Band | Coherence video–model | Gain video/model | Phase | RMS video / model (cm) |
+|---|---|---|---|---|
+| 0.2–0.3 Hz | 0.88–0.96 | 0.96–1.00 | ≤ 1.5° | 2.2–2.6 / 2.2–2.5 |
+| 0.3–0.4 Hz | 0.72–0.87 | 1.00–1.07 | ≤ 4° | 1.6–2.2 / 1.3–1.9 |
+| 0.4–0.6 Hz | 0.40–0.75 | 0.91–1.09 | 5–15° | 1.0–1.2 / 0.7–0.9 |
+
+- **The 0.2–0.4 Hz lane-position motion at highway speed (~33 m/s) is confirmed independently of the model's perception** (observation). The 0.2–0.6 Hz band std is 2.5–3.2 cm in both methods, and the 90th-percentile envelope 5–7 cm. Above 0.4 Hz the agreement falls toward the video noise floor (≤ 1.7–2.0 cm).
+- **Limits:**
+  - daytime highway only;
+  - shared camera and calibration;
+  - this confirms the motion, not its cause.
+- Extrapolating to x = 0 adds noise (route 8 coherence drops sharply), so 12 m is used.

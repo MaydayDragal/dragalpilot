@@ -285,3 +285,78 @@ One dated entry per session, including research-only sessions. Times are America
     - The low-speed impression is still unexplained.
 - Scripts `E:\DragalPilot\scratch\wsl\s5\`, outputs `E:\DragalPilot\analysis\g70-weave-sim-20261004\`, logs `E:\DragalPilot\logs\s5-*.log`.
 - No code or device changes. QA: not applicable (analysis only). Token usage reporting not available.
+
+## 2026-10-04: Session 7, video weave-band check and speed-dependent latAccelFactor scale (offline)
+
+- **Workspace confirmed:**
+  - outer `main` = `origin/main` @ `3f2c2ca`, clean;
+  - `sunnypilot/` `dragal/custom` @ `82f58a9a8c`, clean; WSL clone the same, clean (6 CPU / ~15 GB);
+  - E: UniqueId OK, write probe OK, 256 GB free;
+  - no SSH processes. No device access this session.
+- **Video weave band** (user asked whether the video results change the recommendations): see the follow-up section in [docs/findings/2026-10-04-g70-video-lane-check.md](docs/findings/2026-10-04-g70-video-lane-check.md).
+  - The session 5 "slow variation" metric did not isolate the weave band.
+  - A band-limited check on its outputs confirms 0.2–0.4 Hz lane-position motion at highway speed independently of the model: coherence 0.72–0.96, gain 0.96–1.07, phase ≤ 4°, 0.2–0.6 Hz std 2.5–3.2 cm.
+  - The recommendation stayed (c) more data first, sharpened toward stop-and-go and a request-vs-loop split. The model's lane lines bend toward a close lead when lines are weak (session 5 observation; one window re-viewed).
+- **User decision:** while new drives are pending, assess option (b), a car-scoped speed-dependent latAccelFactor scale, offline.
+- **Speed schedule assessment** ([docs/findings/2026-10-04-g70-laf-speed-schedule.md](docs/findings/2026-10-04-g70-laf-speed-schedule.md)). Question, candidate grid, data split, selection rule and criteria were pre-registered in the doc before any run.
+  - **Source trace (`82f58a9a8c`):**
+    - the scale changes feedforward, P and I in torque; friction torque and the torque limits stay unchanged;
+    - V0's `torque_from_lateral_accel` call has no speed argument (implementation path open);
+    - torqued overwrites latAccelFactor when `useParams`, within ±30% of 4.0.
+  - **Data:**
+    - routes 4 and 9 added to the simulation dataset (V0 replay exact on 89% / 92% of carOutput cycles);
+    - held-out pool routes 6, 7 and 4; no held-out 20–35 mph runs exist.
+  - **Selection** (routes 8 / 0a / 0b, 40-schedule grid): s = [0.9, 1.3, 1.1] at [12.5, 20, 29] m/s. Lag was the binding constraint.
+  - **Held-out result:**
+    - A at 0.3–0.6 Hz down 0.050–0.093, lag +1.4–3.2°, curve and error within limits;
+    - 0.2–0.6 Hz motion only ~4–5% lower;
+    - **fails item 6:** 20–35 mph synthetic step overshoot −1.0% → +0.1%, a pre-registered criterion kept as written;
+    - not robust if torqued learns 4.47 (curve 0.946, error +25%).
+  - torqued alone at 4.2 gives ~40% of the effect.
+  - The K-matched diagnostic cuts more but adds 5–8° of lag.
+  - **No implementation or device change proposed.**
+- Scripts `E:\DragalPilot\scratch\wsl\s7\` and `...\vid\vid_weave_band.py`; outputs `E:\DragalPilot\analysis\g70-laf-sched-20261004\` and `...\g70-video-weave-band-20261004\`; logs `E:\DragalPilot\logs\s7-*`, `s5-s7-*`, `s5-replay-check-s7-*`, `vid-weave-band-*`.
+- No code changes in `sunnypilot/`. QA: not applicable (analysis only). Token usage reporting not available.
+- **Damping term and KP speed schedule** (user request after the latAccelFactor result; [docs/findings/2026-10-04-g70-damping-kp-schedule.md](docs/findings/2026-10-04-g70-damping-kp-schedule.md)). Pre-registered before any run.
+  - **New in the pre-registration:**
+    - command-smoothness criterion 8: 1–10 Hz command RMS, rate-limit binding;
+    - step criterion 6 restated as "overshoot ≤ V0 + 1 point", declared up front; the latAccelFactor result is not re-scored.
+  - **Source:**
+    - V0 passes the 1.2 Hz-filtered measured lat-accel rate to the PID with KD = 0;
+    - KD and KP_INTERP are module constants (car scoping needs plumbing);
+    - the rate state is stale at engagement.
+  - **Harness:** the fast D/KP variants match the source V0 class with its PID rebuilt from the variant tables (≤ 5.5e-8, output identical; routes 0b and 7).
+  - **Selection** (routes 8 / 0a / 0b):
+    - D: 3/48 eligible, choice [0, 0.05];
+    - KP: 39/124 eligible, choice ×[1.0, 1.0, 0.85] at 10 / 15 / 30 m/s.
+    - Larger changes fail on lag, error, low-speed curve, or rate-limit binding.
+  - **Held-out** (routes 6 / 7 / 4): D, KP and their combination all **fail criterion 1** (ΔA only −0.005 to −0.083) and pass 2–8.
+  - **D replay:** engagement kick up to 3.5–4.6 m/s² at KD 0.75; noisy (p99 0.4–1.6 m/s²).
+  - **Conclusion (model):** across the latAccelFactor-scale, D and KP families, the highway weave can be cut by at most ~4–5% within the lag and tracking limits. **No implementation or device change proposed.** Low-speed remains a data question.
+  - Scripts `E:\DragalPilot\scratch\wsl\s8\`, outputs `E:\DragalPilot\analysis\g70-damping-kp-20261004\`, logs `s5-s8-*`, `s8-*`.
+  - A scorer bug (both error definitions under one key) was fixed and rescored; no verdict changed.
+- **Stop-and-go analysis prepared, hands-on-wheel input defined** (user request; [docs/findings/2026-10-04-g70-stop-and-go-plan.md](docs/findings/2026-10-04-g70-stop-and-go-plan.md)). Written before any new drive.
+  - **Plan contents:**
+    - drive protocol D1–D4 (stop-and-go engaged and manual, steady 20–35 mph, optional highway for torqued);
+    - pipeline;
+    - signal and episode definitions, all curvature- and angle-based so they work at low speed;
+    - metrics;
+    - decision rules D1–D5, thresholds provisional and changeable by the user before the data arrives.
+  - **Hands models defined:** M3a (exogenous column torque), M3b (hands-light vs hands-firm dynamics), M3c (command → EPS torque → steering), with acceptance criteria.
+  - **Source facts:** `steeringTorque` = MDPS12 `CR_Mdps_StrColTq` (raw counts; Nm scale unverified), `steeringTorqueEps` = `CR_Mdps_OutTq`; `controlsState.curvature` is from the steering angle; manual `desiredCurvature` = current curvature, so the plan is taken from `modelV2.action`.
+  - **Tool:** `sng_analyze.py`, dry-run on routes 4, 6–9, 0a, 0b, 0c, 0e. The lane extracts of routes 4 and 6–9 were re-made with lead fields into a new folder.
+    - The dry run found four design issues, amended before any new data (A1 standstill in SNG spectra, A2 two-sided lag profile and a new D5, A3 hands coherence ≠ cause, A4 SNG must move). It also found a one-cycle alignment bug (fixed).
+    - The existing data has no engaged stop-and-go episodes. At 20–35 mph: D1 no (0.78, CI 0.58–1.10), the plan and the steering move together whoever steers, and the EPS delivers the command (coherence 0.92).
+  - **Hands feasibility:** column torque is light (|h| > 50 counts 1–5%) and leads the steering motion by 56–131°, a reaction signature. Its coherence with the session 6 plant residual is only 0.03–0.36, so M3a alone is unlikely to close the low-speed model gap. The M3b split is inconclusive (narrow hands range, few low-speed runs).
+  - Scripts `E:\DragalPilot\scratch\wsl\sng\`, outputs `E:\DragalPilot\analysis\g70-sng-prep-20261004\`, logs `sng-*`.
+- **Project rule added (user, 2026-10-04):** every rlog pull also pulls both road-camera videos (`fcamera`, `ecamera`) for the same routes and segments, in the same connection, organized under the same route folder; missing videos are recorded as gaps. Added to CLAUDE.md §3 and `docs/local-storage.md` (Recording rules).
+  - The user had asked for this in session 4. It was saved only as a memory permission, never as a rule.
+  - The stop-and-go plan's "narrow video only for flagged episodes" was corrected to match.
+  - Auto-memory updated to point to the rule.
+- **Video pull for routes 0, 1, 2** (user-authorized; device status user-confirmed: `192.168.98.104`, inside, not active, no other SSH session).
+  - One read-only SSH connection at 2026-10-04T21:44:53Z. The script checked `IsOffroad=1` / `IsEngaged=0`; `GitCommit=82f58a9a8c`; no routes newer than 0e on the device.
+  - 12 files (fcamera + ecamera), 309 MB. sha256 computed on the device; all MATCH after extraction and after promotion by move (`logs/promote-20261004s7.log`).
+  - **Gaps:** route 1 segment 3 videos are 0 bytes on the device; route 0 segment 1 has no video files. Both are recorded in each route's `metadata/PROVENANCE.md`.
+  - Every local route now has rlogs + both road videos for every segment that has them on the device.
+  - The staging folder `temporary/device-pull-20261004s7/` keeps `pull.tar` (309 MB duplicate) and the manifests; the tar will be deleted only with user approval.
+  - Script: `scratch/device/pull_videos_r012_20261004s7.sh`.

@@ -48,6 +48,11 @@ E:\DragalPilot\
 ## Recording rules
 
 - **RLOGS only, never QLOGS.** If an rlog is unavailable, record the gap in `metadata/` and report it. Do not substitute the qlog.
+- **Rlogs and both road-camera videos are pulled together** (user rule, 2026-10-04; CLAUDE.md §3).
+  - **What:** every pull of a route's rlogs also pulls `fcamera.hevc` and `ecamera.hevc` for the same segments, in the same connection.
+  - **Where:** they are promoted into the same route folder (`rlogs/segment-NNN/`, `videos/front-narrow/segment-NNN/`, `videos/front-wide/segment-NNN/`), with one provenance record covering all three.
+  - **Gaps:** a video missing on the device (deleted, not recorded, 0 bytes) is listed per segment and camera in `metadata/`. The rlogs are still promoted.
+  - `qcamera.ts` is never pulled. `dcamera.hevc` only when recorded (`RecordFront=1`) and useful.
 - **Route folder** uses the route **start** time in America/New_York, not the download time: `recordings/YYYY/MM/DD/HH-MM-SS__<route-id>/`.
   - A route that crosses midnight stays in its start-date folder.
   - Because `<route-id>` is in the folder name, two routes with the same local time (e.g. the repeated hour when DST ends) cannot collide.
