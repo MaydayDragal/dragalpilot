@@ -1307,6 +1307,9 @@ FW_VERSIONS = {
     (Ecu.fwdRadar, 0x7d0, None): [
       b'\xf1\x00IKPE RDR -----      1.00 1.00 99110-G9600         ',
     ],
+    (Ecu.eps, 0x7d4, None): [
+      b'\xf1\x00IK2 MDPS R 1.00 1.03 57700G9570  4IK4R103',
+    ],
   },
 }
 
