@@ -46,4 +46,7 @@ One dated entry per session, including research-only sessions. Times are America
 
 - Review complete ([docs/findings/2026-10-04-g70-port-focused-review.md](docs/findings/2026-10-04-g70-port-focused-review.md)): no blockers or majors, 6 minor/info findings, all verified.
 - Fixed: the reference-route comment in `routes.py` now cites PR #1134 (`dragal/custom` @ **`f9325699ed`**, comment-only). Targeted tests re-run on `f9325699ed`: all pass.
-- Pending user decision: alpha-long availability (`UNSUPPORTED_LONGITUDINAL`). Noted: PR #1134 says Harness F, but the docs entry says `hyundai_l`.
+- User decisions:
+  - Alpha long stays as upstream (no `UNSUPPORTED_LONGITUDINAL`). The user won't enable the toggle.
+  - The car has Harness F, so the docs entry is now `hyundai_f` (`dragal/custom` @ **`7e9d0755d9`**, docs-only).
+  - User preference: no targeted test re-runs for docs-only commits.

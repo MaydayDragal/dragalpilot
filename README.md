@@ -1,4 +1,4 @@
-# dragalpilot
+﻿# dragalpilot
 
 Independent sunnypilot customization project: source investigation, local log and video analysis, controlled experiments, and carefully validated customizations.
 
@@ -19,6 +19,6 @@ Logs, videos, datasets, analysis outputs and caches are **never** stored in this
 ## Status
 
 - Baseline: `dev` @ `0b2c431d3abab630df0a32f53236944855a91aa3` (tag `baseline/dev-20261003`), built from master `a5f44653d7f4`.
-- Customization branch `dragal/custom` (local): WIP G70 2024 platform port @ `f9325699ed` (focused review done, see docs/findings). Targeted opendbc tests pass and the car's real FW resolves to `GENESIS_G70_2024`. Parked-car rlogs confirm CRC8 checksums and clean CarState and safety rx parsing. The SCC origin and driving behaviour are unverified. No QA yet.
+- Customization branch `dragal/custom` (local): WIP G70 2024 platform port @ `7e9d0755d9` (focused review done, see docs/findings). Targeted opendbc tests pass and the car's real FW resolves to `GENESIS_G70_2024`. Parked-car rlogs confirm CRC8 checksums and clean CarState and safety rx parsing. The SCC origin and driving behaviour are unverified. No QA yet.
 - Test environment: WSL 2 + Ubuntu 24.04 (distro disk on the data root). See [docs/baseline.md](docs/baseline.md#wsl-test-environment).
 - Device: one read-only SSH inspection on 2026-10-03 (user-authorized, inactive device). See docs/findings/
