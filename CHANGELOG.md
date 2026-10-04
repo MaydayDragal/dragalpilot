@@ -55,4 +55,8 @@ One dated entry per session, including research-only sessions. Times are America
   - Artifact: a git bundle of `7e9d0755d9` (sha256 `bf73cc…3d16`). The install/rollback dry run passed in WSL.
   - Device-load baseline from existing rlogs (CPU mean 53–82%, p95 80–88%). New data-root folder `deploy/`.
 - **User approved the deployment plan** and the `DisableUpdates=1` param write; reboots and stages are confirmed at the time. The user will run the in-car stages alone, so an in-car checklist was written. The Stage 0 install script was generated and simulated in WSL.
-- No device access so far this session.
+- **Deployed (Stage 0), 2026-10-04 ~00:27–00:29 EDT** (user-authorized; device at `.104`, confirmed inactive and indoors, no other SSH session):
+  - Installed `dragal/custom` @ `7e9d0755d9` from the bundle (hash verified) and set `DisableUpdates=1`.
+  - A guarded reboot followed. The post-boot check confirmed `GitCommit=7e9d0755d9`, the updater not running, and the staged baseline update not installed.
+  - Three sequential SSH connections (install, reboot, post-check), never concurrent. Record: `docs/proposals/2026-10-04-g70-2024-deploy.md` § Deployment record.
+- Next: the user runs the in-car checklist (drive not engaged → closed-area engagement → data drives). Afterwards, an rlog pull and analysis.
