@@ -125,3 +125,12 @@ One dated entry per session, including research-only sessions. Times are America
   - Record: `docs/proposals/2026-10-04-g70-tune-0x484-deploy.md` § Deployment record.
   - Next: the user's drive per the experiment definition, then an rlog pull and before/after analysis.
 - User decision: the next round of enhancements includes a Hyundai-specific forwarding rule. It blocks the camera's 0x484 without a `check_relay` entry, so there's no relay-malfunction watch on 0x484, closer to the original commaai/panda#2045. It replaces the current `check_relay` entry (needs safety code, tests, coverage, review, firmware rebuild). The user is now driving to test the deployed `82f58a9a8c`.
+
+## 2026-10-04: Session 3 (continued): first drive after the deployment
+
+- User: subjectively ~75% better; some ping-pong and curve oversteer remain; one takeover at a sharp curve (steering limit). The user considers it expected; not investigated.
+- Pull: device `.104`, offroad, indoors, no other SSH session (user-confirmed). One listing session and one pull session (16:30Z): routes `00000008` (11:41 EDT, 34 min) and `00000009` (12:19 EDT). 40 rlogs, all sha256 MATCH, promoted.
+- Findings ([docs/findings/2026-10-04-g70-tune-0x484-first-drive.md](docs/findings/2026-10-04-g70-tune-0x484-first-drive.md)):
+  - **Every tune criterion met.** Curve actual/desired 1.07 → 1.007. Integrator opposing feedforward 71–100% → 58%. 0.5–3 Hz error share above 25 m/s 0.54–0.70 → 0.28. Mean error 0.064 → 0.058. No steer faults. torqued now estimates ~4.2 (can apply it itself when valid). The slow (~0.1 Hz) lane wander is unchanged, which suggests the path/planner level (hypothesis).
+  - 0x484: the camera still raises its hands-off state internally, but it is no longer forwarded. No relay malfunction (real panda and replay).
+  - New: a sticky `interruptRateCan2` panda fault from a ~3 s startup error burst on bus 1 (unused CAN-FD network) while still in elm327; never repeats while driving. Present on both new-firmware routes, absent before. Cause unknown; no control effect observed. Watching.
