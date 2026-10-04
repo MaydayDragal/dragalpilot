@@ -41,3 +41,9 @@ One dated entry per session, including research-only sessions. Times are America
 - Pushed `7cac8f6..0f024f7` (user-approved).
 - Storage convention (user delegated the choice): undated routes go to `recordings/undated/<route-id>/`, with inferred time bounds in metadata. Filed `00000002--3ea363e27d` there, sha256 verified. All 7 rlogs are now promoted.
 - Focused adversarial review of `dragal/custom` @ `5cdfe3c082` started (single reviewer; it was given only the diff, neutral requirements and the raw evidence, not these findings).
+
+## 2026-10-04: Session 2 (continued past midnight), focused review
+
+- Review complete ([docs/findings/2026-10-04-g70-port-focused-review.md](docs/findings/2026-10-04-g70-port-focused-review.md)): no blockers or majors, 6 minor/info findings, all verified.
+- Fixed: the reference-route comment in `routes.py` now cites PR #1134 (`dragal/custom` @ **`f9325699ed`**, comment-only). Targeted tests re-run on `f9325699ed`: all pass.
+- Pending user decision: alpha-long availability (`UNSUPPORTED_LONGITUDINAL`). Noted: PR #1134 says Harness F, but the docs entry says `hyundai_l`.
