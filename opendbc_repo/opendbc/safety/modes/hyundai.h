@@ -310,6 +310,7 @@ static safety_config hyundai_init(uint16_t param) {
 
   static const CanMsg HYUNDAI_CAMERA_SCC_TX_MSGS[] = {
     HYUNDAI_COMMON_TX_MSGS(2)
+    {0x484, 0, 8, .check_relay = true},  // HDA11_MFC Bus 0: block the camera's copy to suppress "grasp not detected" (commaai/panda#2045)
   };
 
   static const CanMsg HYUNDAI_CAMERA_SCC_LONG_TX_MSGS[] = {
