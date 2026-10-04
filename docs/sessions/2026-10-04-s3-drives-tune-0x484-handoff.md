@@ -83,7 +83,7 @@ Make sunnypilot drive the user's 2024 Genesis G70 well. The port works and is de
 - `torqued` was 60% calibrated at the end of route 9 (estimate ~4.2). It may apply its own value once valid (clip 2.8–5.2). Track this, because it changes the controller between drives.
 - Next round: the Hyundai 0x484 forwarding rule (safety code, tests, 100% coverage, MISRA, review, firmware rebuild with `build_panda_fw.sh`, deployment approval).
 - micd/soundd crash at ~+31.6 s on some routes (3, 5); user-reported known sunnypilot bug; not investigated.
-- Staging folders `temporary/device-pull-20261004{,b,c}` (~7.1 GB) were deleted 2026-10-04 with user agreement, after all 168 files were re-verified against their promoted copies. Device manifests are kept in `E:DragalPilotogsdevice-pull-20261004*.remote.sha256`. `temporary/device-pull-20261003` (session 1) remains.
+- Staging folders `temporary/device-pull-20261004{,b,c}` (~7.1 GB) were deleted 2026-10-04 with user agreement, after all 168 files were re-verified against their promoted copies. Device manifests are kept in `E:\DragalPilot\logs\device-pull-20261004*.remote.sha256`. `temporary/device-pull-20261003` (session 1) remains.
 
 ## Device state and SSH ownership
 
