@@ -1,0 +1,16 @@
+# Upstream clone is tracked by its own .git; baseline SHA recorded in docs/baseline.md
+/sunnypilot/
+
+# Backstop only — data must live under the data root (see docs/local-storage.md), never here
+*.hevc
+*.ts
+*.mp4
+*.mkv
+*.zst
+*.bz2
+rlog*
+qlog*
+*.parquet
+*.npz
+__pycache__/
+.venv/
