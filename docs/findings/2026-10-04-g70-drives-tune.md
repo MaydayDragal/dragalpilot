@@ -57,6 +57,7 @@ Software on device: `dragal/custom` @ `7e9d0755d9` (initData.gitCommit, all rout
 - Lane-centre offset from `modelV2` lane lines (both lines prob > 0.7, v > 10 m/s, excluding 3 s after blinkers and stretches shorter than 20 s), deviation from a 10 s moving average:
   - Engaged: std 0.076–0.094 m, p95 |dev| 0.18–0.20 m.
   - Dominant frequency: about 0.1 Hz (slow wander). Only 19–26% of the power is in 0.15–0.8 Hz.
+  - **Correction (session 4):** 0.1 Hz was the lower edge of the search band, not a peak. The spectrum has no peak, and most of the variation follows road curvature. See [2026-10-04-g70-lane-drift.md](2026-10-04-g70-lane-drift.md).
 - Manual reference: only 31 s of usable manual driving (route 5): std 0.19 m. **The sample is too small to compare.**
 - So the model-reported lane position shows no large fast lateral oscillation. The felt ping-pong may be mostly steering-wheel torque/angle motion rather than lane-position motion. The user's wheel video and the road videos should be reviewed against the curve times listed in `metrics_lateral.json`.
 

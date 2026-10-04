@@ -37,8 +37,35 @@ Software: `dragal/custom` @ `82f58a9a8c`, panda firmware `206ea19c…` (initData
 - **Interpretation (hypothesis):**
   - The systematic over-torque in curves is gone.
   - The remaining felt ping-pong is curve-to-curve variation (±5%) plus a slow (~0.1 Hz) lane-position wander. The wander did not change with the tune, which points at the planned path (model/planner) rather than torque tracking. **Not yet tested.**
+  - **Update (session 4):** tested from the rlogs in [2026-10-04-g70-lane-drift.md](2026-10-04-g70-lane-drift.md). There is no 0.1 Hz peak (that was a band-edge artifact). The variation is mostly the model positioning the car toward the inside of curves, and the car follows the plan closely.
   - `torqued` can now apply its ~4.2 estimate itself once valid (clip window 2.8–5.2), so no further offline latAccelFactor change is needed for that.
 - The `steerSaturated` alert at 12:02:18 (sharp curve, 17.8 m/s, desired −2.6 m/s²) matches the user's takeover. The user considers it expected; not investigated.
+
+### Follow-up (session 4): when `torqued` becomes valid
+
+**Source facts** (`selfdrive/locationd/torqued.py`, `locationd/helpers.py`, `selfdrive/controls/controlsd.py` @ `82f58a9a8c`):
+
+- **What it learns from.** A point is added only when:
+  - lateral is engaged for ≥ 2 s;
+  - no steering override;
+  - v > 15 m/s;
+  - |torque| > 0.02 and |lat accel| ≤ 1 m/s².
+  - Points are sorted into 8 torque buckets with minimums 100/300/500/500/500/500/300/100 (outermost = |torque| 0.3–0.5), and at least 4000 points in total are needed.
+- **The cache restarted at the deployment.** The cache key includes the offline latAccelFactor and friction (L137–142). Points carry over between drives (cached every 60 s).
+- **What controls uses.** `controlsd` applies the filtered values whenever `useParams` is set (L96–97), but the filter only moves once the estimate is valid. Until then the controller runs on the offline 4.0/0.07.
+- **After validity.** The filter's time constant starts at about 250 s and grows to about 1250 s. The value is clipped to 2.8–5.2 (latAccelFactor) and 0.035–0.105 (friction).
+
+**Reconstruction** (approximate; script `torqued_buckets.py`, log `torqued-buckets-20261004.log`): it matches the logged totals within 0.2% (6,849 vs 6,862 points) and calPerc 61 vs 60.
+
+| Bucket (torqued torque sign) | −0.5…−0.3 | −0.3…−0.2 | −0.2…0.2 (4 buckets) | 0.2…0.3 | 0.3…0.5 |
+|---|---|---|---|---|---|
+| Points after route 9 / minimum | **23 / 100** | 218 / 300 | full | 553 / 300 | **55 / 100** |
+| Rate on route 8 (per hour engaged > 15 m/s) | ~49 | ~390 | — | — | ~117 |
+
+- The total (6,849) is already above 4,000. **The limit is the outermost bucket on the negative side** (positive actuator torque, by openpilot's left-positive convention): high torque that still gives ≤ 1 m/s².
+- At route 8's rate, it needs **~1.5–2 more hours of similar engaged driving above 34 mph**. This depends strongly on the road; curvier roads fill it faster.
+- Expected effect once valid: latAccelFactor 4.0 → ~4.2 (+5%), friction 0.07 → ~0.068. That is about 5% less torque for the same lateral accel. Small.
+- If it never becomes valid, the controller simply stays on the deliberately chosen 4.0/0.07.
 
 ## Question 2: 0x484 and the hands-on warning
 

@@ -137,3 +137,47 @@ One dated entry per session, including research-only sessions. Times are America
 - User confirmed: no dashboard "grasp not detected" warning on the drive after the change. Pushed `16d280c..8786028` (user-approved).
 - Next task (user decision): a fresh session investigates the slow (~0.1 Hz) lane drift. Session 3 closed with handoff/kickoff `docs/sessions/2026-10-04-s3-drives-tune-0x484-*`. QA: focused review done for this round's code; two-round QA not performed. Token usage reporting not available.
 - Pushed `8786028..3d0828f` (user-approved). Deleted staging folders `temporary/device-pull-20261004{,b,c}` (~7.1 GB, user-approved) after re-verifying all 168 files against `recordings/`. Device manifests moved to `E:\DragalPilot\logs\device-pull-20261004*.remote.sha256`; provenance pointers updated.
+
+## 2026-10-04: Session 4, lane-drift investigation (rlogs only)
+
+- Workspace confirmed:
+  - outer `main` = `origin/main` @ `3d0828f`, clean;
+  - `sunnypilot/` `dragal/custom` @ `82f58a9a8c`, clean;
+  - WSL clones `82f58a9`/`74a0adc`, clean;
+  - data root UniqueId OK, write probe OK, ~257.5 GB free.
+- No device access.
+- Findings ([docs/findings/2026-10-04-g70-lane-drift.md](docs/findings/2026-10-04-g70-lane-drift.md)):
+  - **Model:** no downloaded bundle. Stock `modeld` runs the built-in default model (`mici`, no chestnut).
+  - **Calibration:** stable (pitch ~1.2°, yaw ~−1.1°, height 1.20 m).
+  - **Source fact:** `CameraOffset` and `PlanplusControl` are read only by `modeld_v2`, so they have no effect in this configuration.
+  - **Signs (GPS-checked):** positive `desiredCurvature` = right turn; model y is right-positive.
+  - **Correction:** the "~0.1 Hz" wander was the lower edge of the search band. The lane-offset spectrum has no peak.
+  - Road curvature explains 64–82% of the offset variance. The car sits ~0.25–0.4 m toward the inside of a 1 km curve, plus a static ~0.15–0.19 m left bias of the device.
+  - The motion is real (the lane lines move together, kinematically consistent), and the model plans it.
+  - The car executes the plan: curvature tracking gain 1.02–1.08, phase within ±2.5° at 0.05–0.25 Hz.
+  - Hypothesis: the model's path choice (curve-cutting), not the controller.
+- New scripts: `E:\DragalPilot\scratch\wsl\{model_calib_identity,lane_drift_extract,lane_drift,lane_drift_spectrum,sign_check_gps}.py`. Outputs in `E:\DragalPilot\analysis\g70-lane-drift-20261004\`.
+- No code changes. QA: not applicable (analysis only).
+- Options for the user: a manual reference drive, measure the device mount offset, or a model-choice proposal. Controller changes are not indicated for this symptom.
+- User input:
+  - The drift is unusual and noticeable, and worst in slow stop-and-go traffic. The user will record engaged and manual logs there.
+  - The device is mounted at the windshield centre (±3 mm).
+  - Stay on the default model for now.
+- Model list from the device's cache (77 bundles): none brand-specific. The web search found no Hyundai-tuned model.
+- Existing data has only ~155 s engaged below 10 m/s, and the lane lines are rarely confident there. The user asked about calming the curve-inside push downstream of the model; the answer and options were given in chat, with no change made.
+- 25–30 mph vs highway, from today's logs:
+  - Only 54 s engaged at 25–30 mph, all in brief passes (≤ 17 s windows); 8 s left after the clean-data filters on the new tune.
+  - Fast band (0.3–3 Hz): no more oscillation at low speed than on the highway (sway 0.19 vs 1.07 cm).
+  - Slow band (< 0.3 Hz): can't be measured from these passes.
+  - Needs a dedicated low-speed drive (engaged + manual).
+- `torqued` validity (source facts + bucket reconstruction, which matches the logged totals within 0.2%):
+  - Total points are sufficient. The limit is the outermost negative-torque bucket: 23/100, filling at ~49 per engaged highway hour, so ~1.5–2 more hours of similar driving above 34 mph (road-dependent).
+  - Once valid, it moves latAccelFactor 4.0 → ~4.2 gradually (time constant ~4–20 min).
+  - Below 15 m/s it learns nothing.
+- User decisions and standing authorizations (saved to memory):
+  - Pull and analyze all comma 4 videos at any time (the CLAUDE.md §6 SSH, IP and state mechanics still apply).
+  - Install helpful tools, dependencies and local vision models on the host or WSL (data on E:; the device is not covered).
+  - The conflict with CLAUDE.md §0.3 was flagged to the user.
+- Low-speed drive protocol written into the lane-drift findings: a curvy 30–35 mph road first, then stop-and-go, then a curvy 45–55 mph road; engaged then manual on the same stretch.
+- Wrote handoff `docs/sessions/2026-10-04-s4-lane-drift-handoff.md` and an optional kickoff for a video lane-position check (`2026-10-04-s4-video-lane-check-kickoff.md`). QA: not applicable (analysis only). Token usage reporting not available.
+- The user reported the low-speed drives done. Pushed outer `main` `3d0828f..20f4242` (session 3's final commits `c9bbd13` and `20f4242`, doc-only, made at 12:50 after this session's start snapshot; pushed together with this request and inspected after the push) plus this session's docs commit (user-approved).
