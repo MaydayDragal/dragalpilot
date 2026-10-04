@@ -33,6 +33,7 @@ E:\DragalPilot\
     videos/front-wide/segment-NNN/
     videos/driver/segment-NNN/
     metadata/
+  recordings/undated/<route-id>/   same inner layout; start time unknown (see Recording rules)
   analysis/       derived datasets, plots, reports (per-investigation subfolders)
   cache/          reusable decoded/converted data, tool caches
     wsl/Ubuntu-24.04/ext4.vhdx   WSL test environment disk (venv, uv cache, test clone; see docs/baseline.md)
@@ -49,6 +50,7 @@ Only `logs/` departs from the kickoff layout. The reason is given beside it abov
 - **Route folder** uses the route **start** time in America/New_York, not the download time: `recordings/YYYY/MM/DD/HH-MM-SS__<route-id>/`.
   - A route that crosses midnight stays in its start-date folder.
   - Because `<route-id>` is in the folder name, two routes with the same local time (e.g. the repeated hour when DST ends) cannot collide.
+  - **Undated routes** (no GPS fix and an unsynced device clock, so the start time can't be determined) go to `recordings/undated/<route-id>/` with the same inner layout. `metadata/` records whatever time bounds can be inferred and how. Never guess a date to fit the dated tree. If the time is established later, move the folder into the dated tree and record the method. Convention added 2026-10-03 (user delegated the choice).
   - `metadata/` records the original timestamp, the UTC offset, exact route and segment identifiers, the device identifier when needed, and how the start time was determined.
 - **Segments and cameras** are kept separate. Original compression and filenames are preserved.
   - The mapping from camera to filename (e.g. which file is the narrow road, wide road, and driver camera) **must be verified against the pinned sunnypilot source before first use**, and the result recorded here. Status: *not yet verified*.
