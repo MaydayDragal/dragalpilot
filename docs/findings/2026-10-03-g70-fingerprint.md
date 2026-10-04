@@ -58,3 +58,10 @@ Question: did the device record what is needed to fingerprint the user's G70, so
 1. Which routes on the device were recorded in the G70, and when? (Decode `initData` and `carParams` from the rlogs.)
 2. CAN bus layout from the rlogs: which addresses appear on buses 0, 1 and 2, whether SCC11/SCC12 (`0x420`/`0x421`) come from the camera, and whether the checksums are CRC8.
 3. What the user's "backup option" is, and whether it is still needed.
+
+## Update: sunnypilot `g70-2024-port-new` branch (user-supplied)
+
+- `origin/g70-2024-port-new` @ `ed8397c6d4dd0571ad7163f89bda974503a0bb2c` (Jason Wen, 2025-08-04, "re-port over"). It is one commit on master `8cce8cf3` (2025-08-02), 3,101 commits behind master `a5f4465`, and the `dev` baseline is not an ancestor. Its only change bumps the `opendbc_repo` submodule `c6f01a60` → **`cfb743f4095225daddb0b4b060fc2257b58a6e6a`**.
+- `cfb743f4` fetched from `commaai/opendbc` (head of a `g70-2024-port` branch) and kept locally as `refs/ext/g70-opendbc` in the sunnypilot clone. Diff saved at `E:\DragalPilot\scratch\g70-opendbc-cfb743f4.diff`. **It is identical to PR #1134**: same 4 files, same blob hashes. It contains no panda/safety changes.
+- Dry run `git apply --check --directory=opendbc_repo` on `dev` @ `0b2c431d`: `fingerprints.py` and `values.py` apply with offsets. `hyundaican.py` (the LKAS11 car list has since gained the NON_SCC cars) and `torque_data/override.toml` (the neighbouring `HONDA_PILOT_4G` value changed) fail on context drift only. Nothing was applied.
+- Still unverified: whether the 2024 G70's CAN layout matches the port's assumptions (rlog analysis pending), whether sunnypilot-specific integration (e.g. `openpilot/sunnypilot/selfdrive/car/car_list.json`, platform selection) needs entries, and which upstream tests (route coverage, FW format, docs) the new platform affects.
