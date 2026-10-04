@@ -116,3 +116,11 @@ One dated entry per session, including research-only sessions. Times are America
   - Two-round QA not performed.
 - Deployment proposal: [docs/proposals/2026-10-04-g70-tune-0x484-deploy.md](docs/proposals/2026-10-04-g70-tune-0x484-deploy.md). **Not authorized yet.** No device access since the morning pull.
 - WSL: installed ffmpeg; cloned the pinned panda source (see `docs/baseline.md`).
+- Pushed outer `main` `27dc28c..16d280c` (user-approved).
+- **Deployed 2026-10-04 ~11:31–11:34 EDT** (user-approved plan and reboot; device `.104`, inactive, indoors, no other SSH session):
+  - WSL dry run passed.
+  - One-connection install of `dragal/custom` @ **`82f58a9a8c`** (bundle sha256 verified, ff-only).
+  - Guarded reboot; on boot `pandad` flashed the panda (signature `599ef38d…` → `5b8d2b33…`, "Done flashing", no mismatch).
+  - Post-boot read-only check OK.
+  - Record: `docs/proposals/2026-10-04-g70-tune-0x484-deploy.md` § Deployment record.
+  - Next: the user's drive per the experiment definition, then an rlog pull and before/after analysis.
