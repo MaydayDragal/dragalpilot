@@ -35,6 +35,7 @@ E:\DragalPilot\
     metadata/
   analysis/       derived datasets, plots, reports (per-investigation subfolders)
   cache/          reusable decoded/converted data, tool caches
+    wsl/Ubuntu-24.04/ext4.vhdx   WSL test environment disk (venv, uv cache, test clone; see docs/baseline.md)
   scratch/        throwaway working files
   temporary/      partial transfers, staging before verification
   logs/           tool/transfer/clone logs (added at setup: keeps command logs out of the repo and out of the recordings tree)

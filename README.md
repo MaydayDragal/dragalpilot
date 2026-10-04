@@ -19,6 +19,6 @@ Logs, videos, datasets, analysis outputs and caches are **never** stored in this
 ## Status
 
 - Baseline: `dev` @ `0b2c431d3abab630df0a32f53236944855a91aa3` (tag `baseline/dev-20261003`), built from master `a5f44653d7f4`.
-- Customization branch `dragal/custom` (local): WIP G70 2024 platform port @ `392f9b6ea9`, untested.
-- WSL 2 + Ubuntu 24.04 install in progress (user-approved; dedicated VM).
+- Customization branch `dragal/custom` (local): WIP G70 2024 platform port @ `5cdfe3c082`. Targeted opendbc tests pass and the car's real FW resolves to `GENESIS_G70_2024`. CAN layout not yet verified from rlogs; no QA yet.
+- Test environment: WSL 2 + Ubuntu 24.04 (distro disk on the data root). See [docs/baseline.md](docs/baseline.md#wsl-test-environment).
 - Device: one read-only SSH inspection on 2026-10-03 (user-authorized, inactive device). See docs/findings/

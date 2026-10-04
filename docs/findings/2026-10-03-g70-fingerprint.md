@@ -64,4 +64,29 @@ Question: did the device record what is needed to fingerprint the user's G70, so
 - `origin/g70-2024-port-new` @ `ed8397c6d4dd0571ad7163f89bda974503a0bb2c` (Jason Wen, 2025-08-04, "re-port over"). It is one commit on master `8cce8cf3` (2025-08-02), 3,101 commits behind master `a5f4465`, and the `dev` baseline is not an ancestor. Its only change bumps the `opendbc_repo` submodule `c6f01a60` → **`cfb743f4095225daddb0b4b060fc2257b58a6e6a`**.
 - `cfb743f4` fetched from `commaai/opendbc` (head of a `g70-2024-port` branch) and kept locally as `refs/ext/g70-opendbc` in the sunnypilot clone. Diff saved at `E:\DragalPilot\scratch\g70-opendbc-cfb743f4.diff`. **It is identical to PR #1134**: same 4 files, same blob hashes. It contains no panda/safety changes.
 - Dry run `git apply --check --directory=opendbc_repo` on `dev` @ `0b2c431d`: `fingerprints.py` and `values.py` apply with offsets. `hyundaican.py` (the LKAS11 car list has since gained the NON_SCC cars) and `torque_data/override.toml` (the neighbouring `HONDA_PILOT_4G` value changed) fail on context drift only. Nothing was applied.
-- Still unverified: whether the 2024 G70's CAN layout matches the port's assumptions (rlog analysis pending), whether sunnypilot-specific integration (e.g. `openpilot/sunnypilot/selfdrive/car/car_list.json`, platform selection) needs entries, and which upstream tests (route coverage, FW format, docs) the new platform affects.
+- Status when that update was written: whether the 2024 G70's CAN layout matches the port's assumptions (rlog analysis pending), whether sunnypilot-specific integration (e.g. `openpilot/sunnypilot/selfdrive/car/car_list.json`, platform selection) needs entries, and which upstream tests (route coverage, FW format, docs) the new platform affects.
+
+## Update: port tests and FW replay (session 2, 2026-10-03 ~23:15 EDT)
+
+Environment: WSL 2 Ubuntu 24.04 test clone, Python 3.12.13, `.venv` from `tools/setup_dependencies.sh` (see `docs/baseline.md`). Tests ran with `python -m unittest <module>` from `opendbc_repo/` (the opendbc tests are unittest-based).
+
+1. **On `392f9b6ea9`:** `opendbc.car.hyundai.tests.test_hyundai` **failed** in `test_platform_code_ecus_available (car_model='GENESIS_G70_2024')`. Non-CAN-FD Hyundai platforms must list EPS FW for fuzzy fingerprinting, and the upstream port lists only camera and radar. Log: `E:\DragalPilot\logs\tests-20261003-231530\`.
+2. **Fix, commit `5cdfe3c082`:** added `(Ecu.eps, 0x7d4, None): [b'\xf1\x00IK2 MDPS R 1.00 1.03 57700G9570  4IK4R103']`. This is the car's own UDS response, identical on buses 0 and 1 in `device-fp-inspect-20261003.log`. The fix is evidence from one car, not an invented value.
+3. **On `5cdfe3c082`, all exit 0** (log `E:\DragalPilot\logs\tests-20261003-231709\`):
+
+   | Suite | Result |
+   |---|---|
+   | `opendbc.sunnypilot.car.tests.test_car_list` | OK. The hand-written `car_list.json` entry equals the generator output. |
+   | `opendbc.car.tests.test_routes` | OK |
+   | `opendbc.car.tests.test_docs` | OK (162 subtests skipped by design: non-upstream cars and comma body) |
+   | `opendbc.car.hyundai.tests.test_hyundai` | OK (2 skipped) |
+   | `opendbc.car.tests.test_fw_fingerprint` | OK (15 tests, 148 subtests skipped) |
+   | `opendbc.safety.tests.test_hyundai`, `test_hyundai_canfd` | OK (354 skipped: base-class/feature skips). This is a regression check only; safety is unchanged. |
+   | NNLC `test_fingerprint` (openpilot side) | **Not run.** The `dev` prebuilt ships an AArch64 `libparams_c.so` and no `SConstruct`, so the test cannot import on x86. It has no G70_2024 case. |
+
+4. **FW replay** (`E:\DragalPilot\scratch\wsl\fp_replay.py`, log `E:\DragalPilot\logs\fp-replay-20261003-231836.log`): all 19 `carFw` entries from `CarParamsPersistent`, plus the captured VIN, run through `match_fw_to_car`.
+   - Baseline `0b2c431d3a`: no match in exact, fuzzy or combined mode. This matches the device's MOCK result.
+   - Candidate `5cdfe3c082`: **exact match `GENESIS_G70_2024`**. Fuzzy-only mode also resolves uniquely to `GENESIS_G70_2024`.
+   - Scope: this is source-level evidence about fingerprint *resolution* only. It says nothing about whether the platform's CAN and control assumptions are correct for this car.
+
+Still open: rlog CAN verification (SCC source bus, checksum, LKAS11/MDPS12), specs and torque values, the `0x484` question, QA.

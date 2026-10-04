@@ -62,9 +62,26 @@ Submodule commits pinned at `a5f4465` (from `git ls-tree`):
 | git-lfs | 3.8.0 (installed; the checkout has no `.gitattributes` and uses no LFS) |
 | Python | **not installed** (only the Windows Store alias) |
 | uv | **not installed** |
-| WSL | **not installed** |
+| WSL | 2026-10-03: WSL 2 with `Ubuntu-24.04`. See below. |
 
-So the upstream build, lint and test tooling **cannot run on this host yet**. Source reading and analysis work. Running anything needs a supported environment (WSL 2 + Ubuntu 24.04, or a separate Ubuntu/macOS machine), which needs a user decision.
+The upstream tooling does not run on the Windows host itself. It runs in WSL (next section).
+
+## WSL test environment
+
+Set up 2026-10-03 (session 2, after the VM reboot).
+
+| Item | Value |
+|---|---|
+| Distro | `Ubuntu-24.04` (Ubuntu 24.04.5 LTS), WSL 2, kernel `6.18.40.1-microsoft-standard-WSL2`. 4 vCPU, ~3 GB RAM. |
+| Disk | Moved with `wsl --manage Ubuntu-24.04 --move` to **`E:\DragalPilot\cache\wsl\Ubuntu-24.04\ext4.vhdx`**, so the venv, uv/pip caches, apt packages and test clone all live on the data root (native ext4). Nothing remains under `%LOCALAPPDATA%\wsl`. |
+| Warning | `wsl` prints "Nested virtualization is not supported on this machine", but the distro boots and runs normally. |
+| User | `dev` (default via `/etc/wsl.conf`, `systemd=true`). Password locked. Passwordless sudo (`/etc/sudoers.d/dev`) only because `tools/setup_dependencies.sh` calls `sudo` for udev rules. The VM is dedicated to this project. |
+| Packages | apt list copied from `tools/setup_dependencies.sh` (`build-essential`, `libcurl4-openssl-dev`, `git` 2.43, …; gcc 13.3). uv 0.12.23 from the upstream installer. |
+| Test clone | `~/src/sunnypilot` (in WSL), cloned with `--single-branch` from the **Windows clone**, remote named `win`. **The Windows clone stays canonical:** commit there, then `git fetch win dragal/custom && git checkout --detach FETCH_HEAD` in WSL. Symlinks are real in this clone (they are placeholders on Windows). |
+| Python env | `tools/setup_dependencies.sh` → `uv sync --frozen --all-extras` → `.venv` (Python 3.12.13, ~650 MB), exit 0. Log: `E:\DragalPilot\logs\wsl-setup-deps-20261003.log`. |
+| Helper scripts | `E:\DragalPilot\scratch\wsl\*.sh` (run with `sed 's/\r$//' <script> \| bash` inside WSL). |
+
+**Limitation (confirmed source fact, `dev` @ `0b2c431d`):** the prebuilt `dev` tree has **no `SConstruct`**, and its committed `.so` files are **AArch64** device builds (e.g. `openpilot/common/libparams_c.so`, ELF machine `0xb7`). So on x86, anything that imports `openpilot.common.params` (or other native libs) fails to load. `dlopen` misreports this as "No such file". opendbc car and safety tests are unaffected: libsafety is compiled at test time. Running openpilot-side tests needs a source build from `origin/master` @ `a5f4465`. Not done yet.
 
 ## Baseline change log
 
@@ -75,5 +92,5 @@ So the upstream build, lint and test tooling **cannot run on this host yet**. So
 ## Decisions (2026-10-03, user)
 
 - **Customization baseline stays `dev` @ `0b2c431d`**, because it is what is installed on the device. (Not yet confirmed from the device itself.) `origin/master` @ `a5f4465` is a reference for history and submodule commits only.
-- **Customization branch:** `dragal/custom`, created from `baseline/dev-20261003` and local only. No edits yet.
+- **Customization branch:** `dragal/custom`, created from `baseline/dev-20261003` and local only. Current head: see the changelog and the latest handoff.
 - **Build environment:** install WSL 2 + Ubuntu-24.04 on this VM (the VM is dedicated to this project). The install was started 2026-10-03. See the changelog for its status.
