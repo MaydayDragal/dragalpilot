@@ -600,7 +600,7 @@ class CAR(Platforms):
   )
   GENESIS_G70_2024 = HyundaiPlatformConfig(
     [HyundaiCarDocs("Genesis G70 2024", "All", car_parts=CarParts.common([CarHarness.hyundai_f]))],
-    CarSpecs(mass=1769, wheelbase=2.83, steerRatio=12.9),  # steerRatio guesstimate from G70 1st Gen platform
+    CarSpecs(mass=1769, wheelbase=2.83, steerRatio=14.1),  # steerRatio: paramsd learned 13.9-14.3 on this car (2026-10-04)
     flags=HyundaiFlags.CHECKSUM_CRC8 | HyundaiFlags.CAMERA_SCC,
   )
   GENESIS_GV70_1ST_GEN = HyundaiCanFDPlatformConfig(
