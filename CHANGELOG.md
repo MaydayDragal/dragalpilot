@@ -29,4 +29,11 @@ One dated entry per session, including research-only sessions. Times are America
 - Test clone `~/src/sunnypilot` in WSL, fetched from the Windows clone (canonical).
 - Targeted tests: on `392f9b6ea9`, `test_hyundai` failed (`GENESIS_G70_2024` has no EPS FW entry). Fixed in `dragal/custom` @ **`5cdfe3c082`** by adding the car's captured EPS FW. On `5cdfe3c082`, car_list, routes, docs, hyundai, fw_fingerprint and the Hyundai safety tests all pass. The NNLC fingerprint test was not run: the `dev` prebuilt has AArch64 `.so` files and no `SConstruct`.
 - FW replay of the car's real `carFw`: baseline gives no match; candidate gives an exact match to `GENESIS_G70_2024`. See the findings doc.
-- No device access. QA: none yet (focused adversarial review pending). The rlogs are still not decoded.
+- No device access. QA: none yet (focused adversarial review pending).
+- Pushed outer `main` `d809131..7cac8f6` (user-approved).
+- rlog decode and offline replay ([docs/findings/2026-10-03-g70-rlog-can.md](docs/findings/2026-10-03-g70-rlog-can.md)):
+  - All 3 routes are the parked G70 (no driving).
+  - The LKAS11 checksum is CRC8 on 100% of frames (supports `CHECKSUM_CRC8`).
+  - Buses 0 and 2 are passthrough, so the SCC origin (`CAMERA_SCC`) can't be determined from these logs.
+  - The candidate's CarState had `canValid` throughout, and the panda safety replay had 0 invalid rx out of ~1.53M.
+- Promoted `00000000--eb903c3c31` (17:54:05 EDT) and `00000001--ed6394b42a` (17:55:51 EDT) to `recordings/2026/10/03/`, sha256 verified. `00000002--3ea363e27d` stays staged: its start time is unknown.
