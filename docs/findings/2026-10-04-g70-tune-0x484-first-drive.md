@@ -43,7 +43,7 @@ Software: `dragal/custom` @ `82f58a9a8c`, panda firmware `206ea19c…` (initData
 ## Question 2: 0x484 and the hands-on warning
 
 - The firmware is active: route 8/9 rlogs show the Hyundai safety mode (param 8) on the panda running `5b8d2b33…` since the deployment boot (deployment record).
-- The camera still raises its internal hands-off state (`LFA_SysWarning`, bus 2): route 8 had 4 episodes, including one of 700 s from 12:02:15; route 9 had 3. The panda no longer forwards the camera's 0x484 to the car. **Whether the cluster stayed quiet needs the user's confirmation**; the user reported no warnings.
+- The camera still raises its internal hands-off state (`LFA_SysWarning`, bus 2): route 8 had 4 episodes, including one of 700 s from 12:02:15; route 9 had 3. The panda no longer forwards the camera's 0x484 to the car. **The user confirmed no dashboard "grasp not detected" warning on this drive.**
 - openpilot raised a hands-on visual (`steerRequired`) only at 12:02:18 (the `steerSaturated` alert, 2.3 s).
 - **Relay malfunction: none.** Real panda: no relay fault; cumulative `safetyTxBlocked` ≤ 5 on route 8 (all in Hyundai mode at engagement boundaries, as before), and the 16 on route 9 all fall in the elm327 startup window. The new safety replayed over both routes: 7.29M rx, 0 invalid, no relay malfunction, no 0x340/0x484/0x485 on bus 0 in the Hyundai mode.
 
@@ -61,7 +61,7 @@ Software: `dragal/custom` @ `82f58a9a8c`, panda firmware `206ea19c…` (initData
 
 ## Next
 
-1. The user to confirm whether any dashboard "grasp"/hands-on warning appeared.
+1. ~~Dashboard warning~~ **Confirmed by the user (2026-10-04): no "grasp not detected" warning appeared on this drive.** The 0x484 change works as intended on this car (user observation; one drive).
 2. More driving lets `torqued` reach valid with ~4.2. Then re-measure.
 3. Investigate the slow lane-position wander (path/planner level) as a separate question.
 4. Next round (user decision): replace the 0x484 `check_relay` entry with a Hyundai forwarding rule; watch the bus-1 startup fault.
