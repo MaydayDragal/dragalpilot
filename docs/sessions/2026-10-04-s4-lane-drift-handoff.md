@@ -73,6 +73,11 @@ Analysis only; no QA needed. The code from the previous round: focused review do
 
 ## Ordered next steps
 
+The user reported the low-speed drives done (2026-10-04). Kickoffs, in order:
+
+1. [low-speed drives](2026-10-04-s4-lowspeed-drives-kickoff.md): does the single device pull for both sessions.
+2. [video lane check](2026-10-04-s4-video-lane-check-kickoff.md): starts after that pull.
+
 1. When the user reports the low-speed drives: confirm the IP and that the device is offroad, then pull rlogs and videos. Run `speed_band_osc.py` with longer windows plus the plan-vs-execution and lane decomposition at low speed. Compare engaged vs manual.
 2. Optional, in parallel: the video lane-position check (kickoff above). Only one session may hold the SSH connection at a time.
 3. Once `torqued` goes valid: one check drive (applied values, curve criteria).

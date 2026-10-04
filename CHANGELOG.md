@@ -181,3 +181,7 @@ One dated entry per session, including research-only sessions. Times are America
 - Low-speed drive protocol written into the lane-drift findings: a curvy 30–35 mph road first, then stop-and-go, then a curvy 45–55 mph road; engaged then manual on the same stretch.
 - Wrote handoff `docs/sessions/2026-10-04-s4-lane-drift-handoff.md` and an optional kickoff for a video lane-position check (`2026-10-04-s4-video-lane-check-kickoff.md`). QA: not applicable (analysis only). Token usage reporting not available.
 - The user reported the low-speed drives done. Pushed outer `main` `3d0828f..20f4242` (session 3's final commits `c9bbd13` and `20f4242`, doc-only, made at 12:50 after this session's start snapshot; pushed together with this request and inspected after the push) plus this session's docs commit (user-approved).
+- Added kickoff `docs/sessions/2026-10-04-s4-lowspeed-drives-kickoff.md` and set the order:
+  1. The low-speed session runs first and does the single device pull: the new drives' rlogs + videos, plus videos of routes 3, 4, 8, 9.
+  2. The video lane-check session starts after that pull and runs offline in parallel.
+  - Both sessions follow shared-file and commit etiquette.

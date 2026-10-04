@@ -1,5 +1,7 @@
 # Kickoff prompt: video lane-position check (copy-ready)
 
+Start this **after** the low-speed session ([kickoff](2026-10-04-s4-lowspeed-drives-kickoff.md)) reports its device pull is done. That pull fetches the videos this session needs, so normally this session needs no device access.
+
 ```text
 Resume the dragalpilot project at C:\Users\dre\Documents\DragalPilot\dragalpilot.
 
@@ -12,9 +14,11 @@ driving model's own laneLines. The video gives a second measurement from the sam
 1. Confirm the workspace and data-root state.
 2. Videos:
    - Routes 5-7 have fcamera/ecamera locally.
-   - Pull fcamera+ecamera for routes 8 and 9, and for 3 and 4 if still on the device. Standing authorization; see memory.
-   - Before connecting: ask me for the current IP, confirm the device is offroad, use exactly one SSH connection, and
-     check no other session holds it. Verify hashes and promote per docs/local-storage.md.
+   - The low-speed session should already have pulled routes 3, 4, 8, 9 (if still on the device) and the new drives.
+     Check recordings/ and its changelog entry.
+   - Only if something is missing: ask me first. Another session may hold the SSH connection. Then confirm the current IP
+     and offroad state, use exactly one SSH connection, verify hashes and promote per docs/local-storage.md.
+   - The new low-speed drives with video are also usable for step 5.
 3. Build the measurement:
    - Use the narrow road camera, the pinned device intrinsics (mici; DEVICE_CAMERAS in the checkout), the logged calibration
      (rpyCalib, height) and frame-to-log alignment via the frame ids / encode indices in the rlogs (verify the mapping;
@@ -30,4 +34,11 @@ driving model's own laneLines. The video gives a second measurement from the sam
 
 Write findings to docs/findings/ with evidence labels, add a changelog entry, and update the session docs.
 No device changes or reboots. Rlogs never qlogs.
+
+Shared-file etiquette (the low-speed session may run in parallel):
+- re-read CHANGELOG.md / docs/sessions/README.md right before editing;
+- add your own dated changelog entry;
+- commit only your own files;
+- don't commit at the same moment as the other session.
+WSL has ~3 GB RAM; if a vision model needs more, raise it in .wslconfig and record it (machine-level setting).
 ```
