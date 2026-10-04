@@ -19,6 +19,6 @@ Logs, videos, datasets, analysis outputs and caches are **never** stored in this
 ## Status
 
 - Baseline: `dev` @ `0b2c431d3abab630df0a32f53236944855a91aa3` (tag `baseline/dev-20261003`), built from master `a5f44653d7f4`.
-- No customizations yet. Customization branch `dragal/custom` (from the `dev` baseline, local only).
+- Customization branch `dragal/custom` (local): WIP G70 2024 platform port @ `392f9b6ea9`, untested.
 - WSL 2 + Ubuntu 24.04 install in progress (user-approved; dedicated VM).
 - Device: one read-only SSH inspection on 2026-10-03 (user-authorized, inactive device). See docs/findings/
