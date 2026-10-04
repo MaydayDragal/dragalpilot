@@ -360,3 +360,4 @@ One dated entry per session, including research-only sessions. Times are America
   - Every local route now has rlogs + both road videos for every segment that has them on the device.
   - The staging folder `temporary/device-pull-20261004s7/` keeps `pull.tar` (309 MB duplicate) and the manifests; the tar will be deleted only with user approval.
   - Script: `scratch/device/pull_videos_r012_20261004s7.sh`.
+- Handoff and kickoff: `docs/sessions/2026-10-04-s7-tuning-sng-prep-*`. Token usage reporting not available. QA: not applicable (analysis, docs and a read-only pull; no code changes).
