@@ -61,3 +61,13 @@ One dated entry per session, including research-only sessions. Times are America
   - Three sequential SSH connections (install, reboot, post-check), never concurrent. Record: `docs/proposals/2026-10-04-g70-2024-deploy.md` § Deployment record.
 - Next: the user runs the in-car checklist (drive not engaged → closed-area engagement → data drives). Afterwards, an rlog pull and analysis.
 - Session 2 closed with handoff/kickoff `docs/sessions/2026-10-04-s2-wsl-tests-deploy-*`. QA: focused review done; two-round QA not performed. Token usage reporting not available.
+
+## 2026-10-04: Session 2 (continued), first drives analysis
+
+- The user's partner drove with the port (00:31 and 00:36 EDT). The user reports a successful engagement and a micd/soundd failure (known sunnypilot build bug, per the user) that needed a restart.
+- rlog pull (user-confirmed: device at .104, offroad, indoors, no other SSH session): one SSH session at 13:28Z, 14 rlogs from 2 routes, all sha256 MATCH. Promoted to `recordings/2026/10/04/`.
+- Findings ([docs/findings/2026-10-04-g70-first-drives.md](docs/findings/2026-10-04-g70-first-drives.md)):
+  - Fingerprint exact. **`CAMERA_SCC` supported:** SCC appears on bus 2 with the relay engaged.
+  - ~304 s engaged at 6-72 mph with no steer faults, no saturation, and no clear oscillation (preliminary).
+  - Safety replay with real TX: no unsafe TX. The 9 blocked CANCEL buttons on route 3 are explained.
+  - CPU stays within baseline. Low-speed behaviour and tune quality are still unvalidated.
