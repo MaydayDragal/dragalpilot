@@ -54,4 +54,5 @@ One dated entry per session, including research-only sessions. Times are America
   - Basis: confirmed updater and launcher behaviour (`updated.py`, `launch_chffrplus.sh`) and the cache rules in `fingerprint()`.
   - Artifact: a git bundle of `7e9d0755d9` (sha256 `bf73cc…3d16`). The install/rollback dry run passed in WSL.
   - Device-load baseline from existing rlogs (CPU mean 53–82%, p95 80–88%). New data-root folder `deploy/`.
-- No device access this session.
+- **User approved the deployment plan** and the `DisableUpdates=1` param write; reboots and stages are confirmed at the time. The user will run the in-car stages alone, so an in-car checklist was written. The Stage 0 install script was generated and simulated in WSL.
+- No device access so far this session.
