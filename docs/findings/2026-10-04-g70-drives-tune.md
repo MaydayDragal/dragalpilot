@@ -83,6 +83,16 @@ Software on device: `dragal/custom` @ `7e9d0755d9` (initData.gitCommit, all rout
 - CPU mean 55.5–59.1%, p95 61–81%, max temp ~60 °C on route 5 (baseline: mean 53–82%, p95 80–88%). Within the acceptance band.
 - micd/soundd exited at +31.6 s on route 5 (route 3: +31.7 s), and not on routes 4, 6, 7. Generic; not investigated.
 
+## Follow-up (same day): user confirmation and wheel video
+
+- **The user confirmed** that the 4 camera hands-off episodes (09:51:54, 10:00:48, 10:23:12, 10:23:55) match the alerts they saw.
+- Wheel video, filed with route 6 at `recordings/2026/10/04/09-51-23__00000006--d25600146e/videos/user-phone-wheel/G70 wheel sunnypilot.mp4`: phone, 720×1280, 30 fps, 29.9 s, `creation_time` 2026-10-04T13:54:59Z (09:54:59 EDT). The user said ~09:55. It is not known whether the phone stamps the start or the end of the clip.
+  - Candidate window A, 09:54:29–09:54:59 (route 6 +185 to +215 s), contains a right-hand curve at 34.8 m/s:
+    - Curve entry overshoot: actual −1.55 vs desired −1.27 m/s² (+22%). The wheel went from −2.4° to +1.9° and then back to +1.1 to +1.4°.
+    - Through the curve: 0.5–1° of wheel motion within each second.
+  - Window B, 09:54:59–09:55:29, contains a smoother left-hand curve.
+  - The frames (1 fps contact sheet, `E:\DragalPilot\analysis\g70-wheel-video-20261004\`) show small wheel rotation changes. The camera is handheld, so the video can't be aligned frame-by-frame with the logged angle. **Alignment is approximate**, and the video adds no measurement beyond the logs.
+
 ## Not established / next
 
 - How the camera's hands-off warning reaches the cluster, and whether the user's alerts match the 4 episodes.

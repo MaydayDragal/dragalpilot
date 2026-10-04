@@ -87,3 +87,32 @@ One dated entry per session, including research-only sessions. Times are America
   - The "engagement" alerts did not come from sunnypilot: no DM alerts, no openpilot hands-on requests. The stock camera raised 4 LFA hands-off warnings while openpilot steered. The path to the cluster is unconfirmed (related to excluded panda PR #2045).
   - Real panda: no faults, 0 invalid rx, ≤4 blocked tx per route; no steer faults. CPU within baseline.
 - No code changes. QA: not applicable (analysis only). A tune change will be proposed as a separate bounded change.
+- Pushed outer `main` `5d57a93..27dc28c` (user-approved).
+
+## 2026-10-04: Session 3 (continued): tune, 0x484 safety change, firmware build, review
+
+- User: the 4 camera hands-off times match their alerts. They supplied a wheel video (~09:55); it was filed with route 6 and aligned approximately with the logs (curve-entry overshoot +22% at 09:54:3x). Decisions:
+  - proceed with the tune;
+  - push approved;
+  - **bring in the upstream panda safety change** (commaai/panda#2045) for this car.
+- `dragal/custom` (local, not pushed), on top of the deployed `7e9d0755d9`:
+  - `c895200ecb`: torque `[4.0, 2.7, 0.07]`.
+  - `2623b19329`: steerRatio 14.1.
+  - `92e72004ac`: hyundai camera-SCC (non-long) TX table gains `{0x484, 0, 8, .check_relay = true}`, which blocks forwarding of the camera's HDA11_MFC; test expectations updated.
+  - `d2accb8980`, `c1806292fa`, `82f58a9a8c`: harness `test_tx_hook_on_wrong_safety_mode` no longer compares a class with its own parameterized variants that have an identical TX list.
+  - `cb66129698`: rebuilt `panda_h7.bin.signed` (sha256 `206ea19c…`).
+- Source facts:
+  - The safety code runs in the panda firmware, which `dev` ships prebuilt and DEBUG-signed.
+  - `pandad` flashes on signature mismatch at start.
+  - The firmware build reproduces the shipped binary byte-for-byte on unchanged code.
+- Tests @ `82f58a9a8c`, all pass: targeted car tests, full safety suite + 100% coverage, MISRA. Also:
+  - Negative check: removing the 0x484 line fails the camera-SCC fwd/relay tests.
+  - `test_models` on the KONA_2022/KONA_EV_2022 reference routes: 14 OK.
+  - New safety replayed over all 5 G70 drives: no relay malfunction, 0 invalid rx.
+- **Focused adversarial review** ([findings](docs/findings/2026-10-04-g70-tune-0x484-focused-review.md)):
+  - No blockers.
+  - 1 major: relay-malfunction exposure from `check_relay`; accepted with the replay and Kona evidence.
+  - 2 small fixes applied.
+  - Two-round QA not performed.
+- Deployment proposal: [docs/proposals/2026-10-04-g70-tune-0x484-deploy.md](docs/proposals/2026-10-04-g70-tune-0x484-deploy.md). **Not authorized yet.** No device access since the morning pull.
+- WSL: installed ffmpeg; cloned the pinned panda source (see `docs/baseline.md`).
