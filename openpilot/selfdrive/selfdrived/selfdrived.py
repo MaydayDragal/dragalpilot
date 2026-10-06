@@ -22,6 +22,7 @@ from openpilot.selfdrive.selfdrived.events import Events, ET
 from openpilot.selfdrive.selfdrived.helpers import ExcessiveActuationCheck
 from openpilot.selfdrive.selfdrived.state import StateMachine
 from openpilot.selfdrive.selfdrived.alertmanager import AlertManager, set_offroad_alert
+from openpilot.selfdrive.ui import soundd_ready
 
 from openpilot.common.version import get_build_metadata
 from openpilot.common.hardware import HARDWARE
@@ -155,6 +156,7 @@ class SelfdriveD(CruiseHelper):
     self.rk = Ratekeeper(100, print_delay_threshold=None)
 
     self.ignored_processes = {'mapd', }
+    self.audio_ready = False
 
     # Determine startup event
     is_remote = build_metadata.openpilot.comma_remote or build_metadata.openpilot.sunnypilot_remote
@@ -184,6 +186,19 @@ class SelfdriveD(CruiseHelper):
 
     CruiseHelper.__init__(self, self.CP)
     self.button_state_tracker = ButtonStateTracker()
+
+  def audio_pending(self) -> bool:
+    """True until soundd reports an open audio stream (soundd_ready.py); latched once ready, checked at 10 Hz."""
+    if self.audio_ready or SIMULATION or REPLAY:
+      return False
+    if self.sm.frame % 10 == 0 and soundd_ready.audio_ready(self.sm['managerState'].processes, bool(self.sm.recv_frame['managerState'])):
+      self.audio_ready = True
+      cloudlog.info(f"selfdrived: soundd audio stream ready at frame {self.sm.frame}")
+    return not self.audio_ready
+
+  def process_not_running(self, not_running: set[str]) -> bool:
+    # until soundd has an open audio stream, treat it as not running so alerts are audible before engagement
+    return bool(not_running - self.ignored_processes) or self.audio_pending()
 
   def update_events(self, CS):
     """Compute onroadEvents from carState"""
@@ -406,7 +421,7 @@ class SelfdriveD(CruiseHelper):
       if not_running != self.not_running_prev:
         cloudlog.event("process_not_running", not_running=not_running, error=True)
       self.not_running_prev = not_running
-    if self.sm.recv_frame['managerState'] and (not_running - self.ignored_processes):
+    if self.sm.recv_frame['managerState'] and self.process_not_running(not_running):
       self.events.add(EventName.processNotRunning)
     else:
       if not SIMULATION and not self.rk.lagging:

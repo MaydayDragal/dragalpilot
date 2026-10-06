@@ -12,6 +12,7 @@ from openpilot.common.utils import retry
 from openpilot.common.swaglog import cloudlog
 
 from openpilot.system import micd
+from openpilot.selfdrive.ui import soundd_ready
 from openpilot.common.hardware import HARDWARE
 
 from openpilot.sunnypilot.selfdrive.ui.quiet_mode import QuietMode
@@ -168,7 +169,8 @@ class Soundd(QuietMode):
     volume = ((weighted_db - AMBIENT_DB) / DB_SCALE) * (MAX_VOLUME - MIN_VOLUME) + MIN_VOLUME
     return math.pow(VOLUME_BASE, (np.clip(volume, MIN_VOLUME, MAX_VOLUME) - 1))
 
-  @retry(attempts=10, delay=3)
+  # 30 x 3 s: the audio device can take 25-40 s after manager start to become usable on a comma 4 (soundd_ready.py)
+  @retry(attempts=30, delay=3)
   def get_stream(self, sd):
     # reload sounddevice to reinitialize portaudio
     sd._terminate()
@@ -182,10 +184,12 @@ class Soundd(QuietMode):
 
     sm = messaging.SubMaster(['selfdriveState', 'selfdriveStateSP', 'soundPressure'])
 
+    soundd_ready.clear()
     with self.get_stream(sd) as stream:
       rk = Ratekeeper(20)
 
       cloudlog.info(f"soundd stream started: {stream.samplerate=} {stream.channels=} {stream.dtype=} {stream.device=}, {stream.blocksize=}")
+      soundd_ready.mark_ready()
       while True:
         sm.update(0)
 

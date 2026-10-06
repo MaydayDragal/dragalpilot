@@ -102,7 +102,8 @@ class Mic:
 
         self.measurements = self.measurements[FFT_SAMPLES:]
 
-  @retry(attempts=10, delay=3)
+  # 30 x 3 s, as soundd: the audio device can take 25-40 s after manager start to become usable on a comma 4
+  @retry(attempts=30, delay=3)
   def get_stream(self, sd):
     # reload sounddevice to reinitialize portaudio
     sd._terminate()
