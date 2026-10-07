@@ -83,6 +83,18 @@ class TestLatControlTorqueV0G70(OpenpilotTestCase):
     lac_log = step(controller, VM, True, 0.001)  # engagement: no step from a stale filter state
     self.assertAlmostEqual(lac_log.desiredLateralAccel, 0.001 * V ** 2, places=6)
 
+  def test_g70_filter_updates_while_inactive_across_reengagement(self):
+    # the filter must keep tracking the request while lateral control is off (controlsd calls reset() and update(False, ...)
+    # every inactive cycle), so re-engagement starts from the current request instead of the value held at disengagement
+    controller, VM, _ = make(G70)
+    for _ in range(100):
+      step(controller, VM, True, 0.0005)
+    for _ in range(300):
+      controller.reset()
+      step(controller, VM, False, 0.001)
+    lac_log = step(controller, VM, True, 0.001)
+    self.assertAlmostEqual(lac_log.desiredLateralAccel, 0.001 * V ** 2, places=6)
+
   def test_g70_friction_deadzone(self):
     # zero request and roll: feedforward f is the friction term alone. 0.4 deg of steering at 30 m/s maps to a lateral-accel
     # deadzone; errors inside it give no friction torque, errors outside it do.
