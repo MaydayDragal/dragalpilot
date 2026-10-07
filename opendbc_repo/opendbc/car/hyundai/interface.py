@@ -33,6 +33,14 @@ class CarInterface(CarInterfaceBase):
   DRIVABLE_GEARS = (structs.CarState.GearShifter.sport, structs.CarState.GearShifter.manumatic)
 
   @staticmethod
+  def configure_torque_tune(candidate: str, tune: structs.CarParams.LateralTuning, steering_angle_deadzone_deg: float | None = None):
+    # default to the per-car deadzone, so it also survives callers that re-run the torque tune without it
+    # (sunnypilot does this through the interface instance when NNLC or EnforceTorqueControl is enabled)
+    if steering_angle_deadzone_deg is None:
+      steering_angle_deadzone_deg = STEERING_ANGLE_DEADZONE_DEG.get(candidate, 0.0)
+    CarInterfaceBase.configure_torque_tune(candidate, tune, steering_angle_deadzone_deg=steering_angle_deadzone_deg)
+
+  @staticmethod
   def _get_params(ret: structs.CarParams, candidate, fingerprint, car_fw, alpha_long, is_release, docs) -> structs.CarParams:
     ret.brand = "hyundai"
 
@@ -123,8 +131,7 @@ class CarInterface(CarInterfaceBase):
     ret.centerToFront = ret.wheelbase * 0.4
     ret.steerActuatorDelay = 0.1
     ret.steerLimitTimer = 0.4
-    CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning,
-                                           steering_angle_deadzone_deg=STEERING_ANGLE_DEADZONE_DEG.get(candidate, 0.0))
+    CarInterface.configure_torque_tune(candidate, ret.lateralTuning)
 
     if ret.flags & HyundaiFlags.ALT_LIMITS:
       ret.safetyConfigs[-1].safetyParam |= HyundaiSafetyFlags.ALT_LIMITS.value

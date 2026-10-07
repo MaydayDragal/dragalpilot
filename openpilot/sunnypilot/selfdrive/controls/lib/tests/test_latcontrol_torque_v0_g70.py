@@ -1,4 +1,5 @@
 import math
+from collections import deque
 
 import numpy as np
 
@@ -6,12 +7,14 @@ from openpilot.cereal import log
 from opendbc.car.structs import car
 from opendbc.car.car_helpers import interfaces
 from opendbc.car.hyundai.values import CAR as HYUNDAI
+from opendbc.car.lateral import get_friction
 from opendbc.car.vehicle_model import VehicleModel
+from openpilot.common.params import Params
 from openpilot.common.realtime import DT_CTRL
 from openpilot.common.test import OpenpilotTestCase
 from openpilot.selfdrive.car.helpers import convert_to_capnp
 from openpilot.sunnypilot.selfdrive.car import interfaces as sunnypilot_interfaces
-from openpilot.sunnypilot.selfdrive.controls.lib.latcontrol_torque_v0 import LatControlTorque as LatControlTorqueV0
+from openpilot.sunnypilot.selfdrive.controls.lib.latcontrol_torque_v0 import FRICTION_THRESHOLD, LatControlTorque as LatControlTorqueV0
 
 G70 = HYUNDAI.GENESIS_G70_2024
 OTHERS = (HYUNDAI.GENESIS_G70, HYUNDAI.HYUNDAI_SONATA, HYUNDAI.HYUNDAI_IONIQ_5)
@@ -111,3 +114,68 @@ class TestLatControlTorqueV0G70(OpenpilotTestCase):
       else:
         self.assertEqual(lac_log.f, lac_ref.f, f"angle {angle}")
         self.assertEqual(np.sign(lac_log.f), np.sign(lac_log.error))
+
+  def test_g70_deadzone_survives_torque_tune_rerun(self):
+    # sunnypilot re-runs the torque tune through the interface instance when NNLC or EnforceTorqueControl is on
+    params = Params()
+    params.put_bool("EnforceTorqueControl", True, block=True)
+    for car_name, expected in ((G70, 0.4), *((c, 0.0) for c in OTHERS)):
+      CarInterface = interfaces[car_name]
+      CP = CarInterface.get_non_essential_params(car_name)
+      CI = CarInterface(CP, CarInterface.get_non_essential_params_sp(CP, car_name))
+      sunnypilot_interfaces.setup_interfaces(CI, params)
+      self.assertAlmostEqual(CI.CP.lateralTuning.torque.steeringAngleDeadzoneDeg, expected, places=6, msg=car_name)
+      CI.configure_torque_tune(CP.carFingerprint, CP.lateralTuning)  # the re-run itself, without a deadzone argument
+      self.assertAlmostEqual(CP.lateralTuning.torque.steeringAngleDeadzoneDeg, expected, places=6, msg=car_name)
+
+  def test_g70_filter_matches_reference_recursion_across_engagement(self):
+    # changing request while inactive (with reset() every inactive cycle, as controlsd does), the first value ever seen arriving
+    # while inactive, then engagement with a step: every active cycle must follow y += alpha * (x - y) from the first sample
+    controller, VM, _ = make(G70)
+    alpha = DT_CTRL / (1 / (2 * math.pi * 2.0) + DT_CTRL)
+    inputs = [(False, 0.0002 + 2e-6 * k) for k in range(150)] + [(True, 0.0012)] * 40 + [(False, 0.0004)] * 7 + [(True, 0.0004)] * 30
+    y = None
+    for n, (active, c) in enumerate(inputs):
+      y = c if y is None else y + alpha * (c - y)
+      if not active:
+        controller.reset()
+      lac_log = step(controller, VM, active, c)
+      if active:
+        self.assertAlmostEqual(lac_log.desiredLateralAccel, y * V ** 2, places=6, msg=f"cycle {n}")
+
+  def test_g70_filtered_request_feeds_jerk_feedforward_and_extension(self):
+    controller, VM, _ = make(G70)
+    alpha = DT_CTRL / (1 / (2 * math.pi * 2.0) + DT_CTRL)
+    seen = []
+    ext_update = controller.extension.update
+
+    def spy(*args):
+      seen.append(args[14])  # desired_curvature as passed to the extension
+      return ext_update(*args)
+    controller.extension.update = spy
+    tp = controller.torque_params
+    dz = abs(VM.calc_curvature(math.radians(tp.steeringAngleDeadzoneDeg), V, 0.0)) * V ** 2
+    delay_frames = int(np.clip(LAT_DELAY / DT_CTRL, 1, controller.lat_accel_request_buffer_len))
+    buf = deque([0.0] * controller.lat_accel_request_buffer_len, maxlen=controller.lat_accel_request_buffer_len)
+    y = None
+    for n in range(60):
+      c = 0.0005 if n < 10 else 0.0015
+      y = c if y is None else y + alpha * (c - y)
+      lac_log = step(controller, VM, True, c)
+      fut = y * V ** 2
+      expected = buf[-delay_frames]
+      buf.append(fut)
+      self.assertAlmostEqual(seen[-1], y, places=12, msg=f"cycle {n}")
+      self.assertAlmostEqual(lac_log.desiredLateralJerk, (fut - expected) / LAT_DELAY, places=5, msg=f"cycle {n}")
+      # zero angle, roll and offset: error == setpoint == fut, and the feedforward is fut + friction(error)
+      self.assertAlmostEqual(lac_log.f, fut + get_friction(fut, dz, FRICTION_THRESHOLD, tp), places=5, msg=f"cycle {n}")
+
+  def test_g70_deadzone_edges_at_two_speeds(self):
+    for v in (20.0, 30.0):
+      for factor, inside in ((0.95, True), (1.05, False), (-0.95, True), (-1.05, False)):
+        g70, VM, _ = make(G70)
+        ref, VM_ref, _ = make(G70, deadzone_deg=0.0)
+        lac_log = step(g70, VM, True, 0.0, factor * 0.4, v=v)
+        lac_ref = step(ref, VM_ref, True, 0.0, factor * 0.4, v=v)
+        self.assertNotEqual(lac_ref.f, 0.0)
+        self.assertEqual(lac_log.f, 0.0 if inside else lac_ref.f, f"v {v} factor {factor}")
