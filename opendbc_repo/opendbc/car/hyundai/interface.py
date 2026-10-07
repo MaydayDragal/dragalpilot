@@ -18,6 +18,12 @@ Ecu = structs.CarParams.Ecu
 # Cancel button can sometimes be ACC pause/resume button, main button can also enable on some cars
 ENABLE_BUTTONS = (ButtonType.accelCruise, ButtonType.decelCruise, ButtonType.cancel, ButtonType.mainCruise)
 
+# Friction-compensation deadzone in steering-wheel degrees (lateralTuning.torque.steeringAngleDeadzoneDeg). The torque
+# controller ignores lateral-accel errors smaller than this angle's equivalent when computing the friction term only.
+# GENESIS_G70_2024: the steering holds about 0.4 deg short of the target before breaking free (static friction); without a
+# deadzone the friction term keeps ramping inside that band and the wheel moves in small hold-and-jump steps.
+STEERING_ANGLE_DEADZONE_DEG = {CAR.GENESIS_G70_2024: 0.4}
+
 
 class CarInterface(CarInterfaceBase):
   CarState = CarState
@@ -117,7 +123,8 @@ class CarInterface(CarInterfaceBase):
     ret.centerToFront = ret.wheelbase * 0.4
     ret.steerActuatorDelay = 0.1
     ret.steerLimitTimer = 0.4
-    CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
+    CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning,
+                                           steering_angle_deadzone_deg=STEERING_ANGLE_DEADZONE_DEG.get(candidate, 0.0))
 
     if ret.flags & HyundaiFlags.ALT_LIMITS:
       ret.safetyConfigs[-1].safetyParam |= HyundaiSafetyFlags.ALT_LIMITS.value

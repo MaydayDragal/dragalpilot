@@ -33,6 +33,12 @@ LAT_ACCEL_REQUEST_BUFFER_SECONDS = 1.0
 FRICTION_THRESHOLD = 0.3
 VERSION = 0
 
+# Car-scoped first-order low-pass of the desired curvature (cutoff in Hz), applied every cycle (also while inactive, so it
+# tracks the request and adds no step at engagement). GENESIS_G70_2024: small fast jitter in the requested curvature keeps
+# re-triggering a hold-and-jump steering motion (static friction + friction term); 2 Hz removes most of it and adds
+# about 80 ms of lag to the request.
+DESIRED_CURVATURE_LP_HZ = {"GENESIS_G70_2024": 2.0}
+
 
 class LatControlTorque(LatControl):
   def __init__(self, CP, CP_SP, CI, dt):
@@ -47,6 +53,10 @@ class LatControlTorque(LatControl):
     self.lat_accel_request_buffer = deque([0.] * self.lat_accel_request_buffer_len , maxlen=self.lat_accel_request_buffer_len)
     self.previous_measurement = 0.0
     self.measurement_rate_filter = FirstOrderFilter(0.0, 1 / (2 * np.pi * LP_FILTER_CUTOFF_HZ), self.dt)
+    curvature_lp_hz = DESIRED_CURVATURE_LP_HZ.get(CP.carFingerprint)
+    self.desired_curvature_filter = None
+    if curvature_lp_hz is not None:
+      self.desired_curvature_filter = FirstOrderFilter(0.0, 1 / (2 * np.pi * curvature_lp_hz), self.dt, initialized=False)
 
     self.extension = LatControlTorqueExt(self, CP, CP_SP, CI)
 
@@ -64,6 +74,9 @@ class LatControlTorque(LatControl):
     # Override torque params from extension
     if self.extension.update_override_torque_params(self.torque_params):
       self.update_limits()
+
+    if self.desired_curvature_filter is not None:
+      desired_curvature = self.desired_curvature_filter.update(desired_curvature)
 
     pid_log = log.ControlsState.LateralTorqueState.new_message()
     pid_log.version = VERSION
