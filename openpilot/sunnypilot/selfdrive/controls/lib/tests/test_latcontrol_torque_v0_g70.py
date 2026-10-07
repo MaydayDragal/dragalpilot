@@ -47,7 +47,7 @@ def step(controller, VM, active, curvature, angle_deg=0.0, v=V):
 class TestLatControlTorqueV0G70(OpenpilotTestCase):
   def test_deadzone_only_for_g70_2024(self):
     _, _, CP = make(G70)
-    self.assertEqual(CP.lateralTuning.torque.steeringAngleDeadzoneDeg, 0.4)
+    self.assertAlmostEqual(CP.lateralTuning.torque.steeringAngleDeadzoneDeg, 0.4, places=6)  # float32 field
     for car_name in OTHERS:
       _, _, CP = make(car_name)
       self.assertEqual(CP.lateralTuning.torque.steeringAngleDeadzoneDeg, 0.0, car_name)
@@ -58,18 +58,18 @@ class TestLatControlTorqueV0G70(OpenpilotTestCase):
       controller, VM, _ = make(car_name)
       step(controller, VM, True, 0.0)
       lac_log = step(controller, VM, True, 0.001)
-      self.assertAlmostEqual(lac_log.desiredLateralAccel, 0.001 * V ** 2, places=9, msg=car_name)
+      self.assertAlmostEqual(lac_log.desiredLateralAccel, 0.001 * V ** 2, places=6, msg=car_name)  # float32 log fields
 
   def test_g70_request_first_order_lowpass(self):
     controller, VM, _ = make(G70)
     alpha = DT_CTRL / (1 / (2 * math.pi * 2.0) + DT_CTRL)
     c0, c1 = 0.0005, 0.0015
     lac_log = step(controller, VM, True, c0)  # first value initializes the filter: no ramp from 0
-    self.assertAlmostEqual(lac_log.desiredLateralAccel, c0 * V ** 2, places=9)
+    self.assertAlmostEqual(lac_log.desiredLateralAccel, c0 * V ** 2, places=6)
     for n in range(1, 101):
       lac_log = step(controller, VM, True, c1)
       expected = c1 + (c0 - c1) * (1 - alpha) ** n
-      self.assertAlmostEqual(lac_log.desiredLateralAccel, expected * V ** 2, places=7, msg=f"cycle {n}")
+      self.assertAlmostEqual(lac_log.desiredLateralAccel, expected * V ** 2, places=6, msg=f"cycle {n}")
     # 2 Hz first order: about 63% of a step after one time constant (80 ms), > 99% after 0.4 s
     self.assertGreater(lac_log.desiredLateralAccel, 0.999 * c1 * V ** 2)
 
