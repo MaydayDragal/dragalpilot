@@ -361,3 +361,650 @@ One dated entry per session, including research-only sessions. Times are America
   - The staging folder `temporary/device-pull-20261004s7/` keeps `pull.tar` (309 MB duplicate) and the manifests; the tar will be deleted only with user approval.
   - Script: `scratch/device/pull_videos_r012_20261004s7.sh`.
 - Handoff and kickoff: `docs/sessions/2026-10-04-s7-tuning-sng-prep-*`. Token usage reporting not available. QA: not applicable (analysis, docs and a read-only pull; no code changes).
+
+## 2026-10-05: Session 8, new drives pulled, regimes classified, stop-and-go rules run
+
+- **Workspace confirmed:**
+  - outer `main` = `origin/main` @ `606c36b`, clean;
+  - `sunnypilot/` `dragal/custom` @ `82f58a9a8c`, clean; WSL clone the same, clean;
+  - E: UniqueId OK, write probe OK, 255 GB free.
+- **User decisions:**
+  - new drives were done by the user's partner, so their coverage was classified from the data;
+  - D-rule thresholds kept as written (decided before the data);
+  - pull authorized;
+  - delete the session 7 `pull.tar`.
+- **Project rule added (user, 2026-10-05):** unneeded files may be deleted once they are no longer useful. Added to CLAUDE.md §3 and `docs/local-storage.md` (Cleanup): verified duplicates, superseded temp/scratch; never promoted recordings or the only copy; small manifests kept; data deletions noted here.
+- **Deleted under that rule:**
+  - `temporary/device-pull-20261004s7/pull.tar` (309 MB, user-approved);
+  - `temporary/device-pull-20261003/rlogs.tar` and its 7 staged rlogs (69 MB). Each was sha256-identical to its promoted copy first.
+  - `temporary/device-pull-20261005s8/pull.tar` (11.4 GB) after the promotion below.
+  - Manifests and logs kept.
+- **Device pull** (user-confirmed: `192.168.98.104`, indoors, not in the car, no SSH sessions):
+  - one read-only SSH connection 2026-10-05T22:35:38Z–22:44:52Z; the script confirmed `IsOffroad=1`, `IsEngaged=0`, `GitCommit=82f58a9a8c`, `RecordFront=0`;
+  - 15 new routes `0000000f`–`0000001d`: rlog + fcamera + ecamera for every segment, 420 files, 11.4 GB;
+  - all sha256 MATCH after extraction and after promotion by move (`logs/promote-20261005s8.log`);
+  - folders by GPS start time into `recordings/2026/10/04/` and `/05/`, each with `metadata/PROVENANCE.md`.
+  - **Gap:** route `00000012` segment 8 is 0 bytes on the device (rlog and both videos).
+  - No device changes.
+- **Analysis** ([docs/findings/2026-10-05-g70-sng-drives.md](docs/findings/2026-10-05-g70-sng-drives.md)):
+  - **Coverage against the protocol:**
+    - D4 highway: ~71 min engaged above 34 mph, well covered;
+    - D1 engaged stop-and-go: 2 episodes, 98 s;
+    - D2 manual stop-and-go: 4 episodes, 204 s, in different scenes from D1;
+    - D3 steady 20–35 mph: 126 s, one run ≥ 30 s.
+  - **Stop-and-go:**
+    - D1 and D5: insufficient data;
+    - D2: not evaluated (gate not met);
+    - D3 and D4: no.
+    - In the two engaged episodes the wheel's weave-band motion (0.48°) is close to manual (0.42°). The car follows the plan's weave-band wiggles with gain 0.29.
+    - Not demonstrated, not ruled out.
+  - **Steady 20–35 mph, pooled with the session 7 routes:** D1 no (0.65, CI 0.47–0.91); D5 no.
+  - **Learned state:**
+    - torqued went valid on route `12` (latAccelFactor 3.80 → 3.69).
+    - A 18 s `MOCK`-fingerprint route (`17`) then made torqued, paramsd and lagd all restart from defaults on the next drive. Confirmed in source: `card.py` `CarParamsPrevRoute`, the restore-key checks in `torqued.py` / `paramsd.py` / `lagd.py`.
+    - torqued is at 59% again.
+  - **Plant check:**
+    - the session 6 plant holds on new held-out highway drives (A within ±0.18);
+    - at 20–35 mph only 3 held-out chunks and one 41 s closed-loop run: the model still under-predicts above 0.4 Hz;
+    - hands models not run (too little 20–35 mph data).
+  - No software or device change proposed.
+- **Script fix:** `scratch/wsl/drive_extract.py` crashed on the `MOCK` route's `pid` lateral tuning. It now reads torque tuning only when set.
+- **New scripts:** `s8_regimes.py`, `run_s8_*.sh`, `scratch/device/pull_new_20261005s8.sh`, `scratch/promote_20261005s8.ps1`.
+- **Outputs:** `analysis/g70-sng-20261005/`. Logs: `logs/s8-*`, `s5-s8-*`, `device-pull-20261005s8.*`.
+- No code changes in `sunnypilot/`. QA: not applicable (analysis, docs, read-only pull). Token usage reporting not available.
+- **Device errors investigated** (user request after the partner's report; [docs/findings/2026-10-05-g70-device-errors.md](docs/findings/2026-10-05-g70-device-errors.md)). Offline, from the pulled rlogs.
+  - **soundd/micd:** both crash 31 s into routes `03`, `05`, `13`, `16`, `18`: 5 of 21 routes that start within 26 s of a cold boot, never later in a boot.
+    - Cause: `get_stream failed after retry` (10 × 3 s, `soundd.py` L171).
+    - The manager doesn't restart a crashed process while onroad (`process.py` L168–178), so `processNotRunning` blocks engagement or soft-disables ("TAKE CONTROL IMMEDIATELY", route `18` 06:41:01).
+    - Upstream code, not our port. The root cause of the audio delay is a hypothesis.
+  - **"Unsupported vehicle" (route `17`):** sunnypilot was re-enabled ~2 s after disabling. The 1 s offroad flip during the firmware query left 1 ECU response, giving `MOCK`/dashcam, which also reset torqued/paramsd/lagd. The earlier "CAN not up" guess was corrected in the drives doc.
+  - **locationd (10-04, route `11`):** `locationdTemporaryError` for the whole route after gyro-vs-camera-odometry rejections at start-up. Why it didn't recover is not determined (filter bias not logged). Not found on 10-05.
+  - **Grasp warning:** the only camera keep-hands-on-wheel escalation (`LFA_SysWarning` 5→6, 40 s) in all new routes is route `1a` 06:43:20–06:44:01, just before the bookmark at 06:44:07.
+    - 0x484/0x485 were blocked, and no forwarded message showed a flag change.
+    - Session 3's 0x484 confirmation only covered level 3 (`lfa_error`), so the fix was never tested against a hands-off escalation. Annotated in the 0x484 findings.
+    - How the warning reached the cluster is open.
+  - **Torque tune:** not overwritten. latAccelFactor 4.0, friction 0.07, steerRatio 14.1 are in source and in carParams on every G70 route. Only the learned layer was reset.
+  - **Tools:** `s8_diag.py`, `s8_crash_dump.py`, `s8_uptime.py`, `s8_locationd_inputs.py`, `s8_gyro_bias.py`, `s8_bus_diff.py`, `run_s8_diag.sh`, `run_s8_crashscan.sh`, `run_s8_uptime.sh`, `run_s8_hands_scan.sh`. Outputs `analysis/g70-sng-20261005/diag/`; logs `s8-diag-*`, `s8-crashscan-*`, `s8-hands-scan-*`.
+- **Project rule (user, 2026-10-05):** read-only pulls from the device are unrestricted in scope. Added to CLAUDE.md §6, with the other §6 rules unchanged; secrets stay on the data root. Memory updated.
+- **Full device-log pull** (user-authorized; indoors, inactive, `.104`, no SSH sessions): inventory connection 23:40:57Z, pull connection 23:41:36–40Z.
+  - 636 files / 25 MB (swaglogs, boot logs, crash logs, params, `/var/log`, plus command output); sha256 all MATCH.
+  - Stored in the new `device-logs/` data-root folder (documented in `docs/local-storage.md`). Staging tar deleted under the cleanup rule.
+- **Deeper analysis** (device-errors findings, follow-up section):
+  - **Audio:** stream opens 19–29 s after a cold-boot start, otherwise crashes at ~31 s (5 of 18), versus <1 s later in a boot. Upstream already raised 7 → 10 retries for the same reason (#36415).
+  - **Gyro:** the device's yaw bias is 0.026–0.039 rad/s, temperature-dependent, about the size of locationd's cross-check threshold. The filter starts at bias 0 every boot (`LocationFilterInitialState` is never written). Lock-out hypothesis supported, not proven.
+  - **Route `1a`:** the slowdown was stock cruise braking for a cut-in at 06:44:03. The comma "TAKE CONTROL IMMEDIATELY" was at 06:41:01 (soundd), not during the grasp warning.
+- **Follow-up 2** (user requests: boot timing, offline locationd replay, alert scan; findings section "Follow-up 2"):
+  - **Boot:** the OS boot is consistent (manager at 10.6–14.9 s on all 31 boot logs). The audio path is the slow part (25–39 s after manager start). Crashes are the earliest soundd starts combined with slower audio.
+  - **locationd replay:**
+    - x86 filter build in `cache/x86-locationd/`; `libeigen3-dev` installed in WSL;
+    - replay matches the device on normal routes (172/172 s, 176/176 s);
+    - gyro-bias hypothesis **rejected** (threshold is ~0.3 rad/s after the ×10 std multiplier);
+    - with the logged 16-sample burst injected, the replay matches route `11` 42/42 s: the counter decay needs ~100 s, so the error outlasted the 51 s route;
+    - the burst's trigger is unexplained.
+  - **Alert scan:** a full camera hands-off sequence (5→6 for 40 s) happened twice (routes 6 and `1a`). Both end with HDA cancel plus SCC11 `DriverAlertDisplay` = 3, which is forwarded to the car. That is the likely path of the cluster "grasp not detected" alert.
+- **Audio fix (user decision: option B), implemented, not committed or deployed** ([docs/findings/2026-10-05-soundd-audio-gate.md](docs/findings/2026-10-05-soundd-audio-gate.md)):
+  - soundd/micd retry 10 → 30 × 3 s;
+  - a new `/dev/shm` readiness marker (soundd PID);
+  - selfdrived raises `processNotRunning` until it matches ("soundd (audio starting)"), latched, 10 Hz, bypassed in REPLAY/SIMULATION;
+  - `selfdriveInitializing` deliberately not used, because `card.py` gates CAN output on it.
+  - **Tests:** new x86 harness (`cache/x86-openpilot/`); baseline 47/47 OK; candidate 80/80 OK; ruff/codespell clean; 7/7 mutations caught.
+  - **Focused adversarial review:** no blockers/majors; minor/info findings fixed (alert callback no longer reads the marker; corrupt-marker and temp-leak handling; clear on start; extra tests).
+  - **Deployment proposal** written ([docs/proposals/2026-10-05-soundd-audio-gate-deploy.md](docs/proposals/2026-10-05-soundd-audio-gate-deploy.md)); awaiting approval.
+- **Gyro:** deferred (user) unless it recurs.
+- **Grasp-warning research** (device-errors findings, Follow-up 3):
+  - **Correction:** route `1a`'s engagement was the cruise MAIN button (bit 256), not the LFA button.
+  - The camera's hands-off escalation happens only while the car's own LFA is on: 1,986 level-5/6 frames with the icon on vs 0 with it off (~9,900 s engaged with it off).
+  - **Recommended next:** a supervised test with the car's own LFA switched off in its settings.
+  - **Rejected:** spoofing hands-on torque and filtering main to the camera. Replacing SCC11 was later assessed as not advisable (Follow-up 4); it had wrongly been listed as excluded by the user.
+- **WSL tooling:** apt `libzmq3-dev`, and the x86 builds of params/msgq/visionipc (test-only, data root).
+- **2024 G70 owner's manual** (Genesis web manual IK/2024; pages saved in `scratch/manual-g70/`):
+  - LFA has **no** settings toggle (button-only), which confirms the partner.
+  - HDA can be deselected under Setup > Vehicle > Driver Assistance > Driving Convenience > Highway Driving Assist.
+  - The Driving Assist button = Smart Cruise (our `mainCruise`).
+  - The HDA hands-off chain ends with "HDA system canceled" and then the **Driving Speed Limit**, "Driver's grasp not detected. Driving speed will be limited" (decelerates toward 40 mph; cancelled by grabbing the wheel). This matches the partner's report and route `1a`; SCC11 `DriverAlertDisplay` = 3 is most likely that message.
+  - The route `1a` braking is most consistent with the cut-in; the speed limit was cancelled by the wheel grab.
+  - **Proposed workflow:** deselect HDA; engage with the Driving Assist button; don't press the Lane Driving Assist button. Needs a supervised test plus logs.
+  - **Replacing SCC11:** assessed as not advisable (new longitudinal failure mode; would only hide the message while the car still slows; widens the safety TX allowlist). Earlier listed as "excluded by the user"; that was my framing, corrected.
+- **Parallel car LFA vs sunnypilot (user question; Follow-up 5):**
+  - On route `1a` the car's own LFA ran in parallel for 63 s with large, mostly left requests, sometimes opposite to sunnypilot's.
+  - The panda blocked all 9,976 camera LKAS11 frames (0 on the car side). The MDPS followed sunnypilot (correlation 0.96 vs 0.40).
+  - **No actuator conflict.** The real interaction is the car's hands-off/HDA chain acting through the forwarded cruise messages.
+- **Audio fix committed** on `dragal/custom` as `c027a92857` (local, user-approved "commit / deploy"); 80/80 tests at that revision.
+  - Bundle sha256 `a8accee3…4158`; WSL dry-run install and rollback OK (`deploy/audio-gate-20261005/`).
+  - **Device install not run yet:** the address and inactive state must be reconfirmed (CLAUDE.md §6), and the reboot needs separate authorization.
+  - WSL test clone moved to `c027a92857`, clean.
+- **User decision:** restore torqued to its end-of-route-`0x16` state in a new session.
+  - Route `0x16`'s logged final state: calPerc 100, laf 3.688, friction 0.081, 7,723 points.
+  - The points aren't in the rlogs, so they must be reconstructed by replaying `TorqueEstimator` over routes 8 to `0x16`.
+- Handoff and kickoff: `docs/sessions/2026-10-05-s8-sng-errors-audio-*`. Token usage reporting not available.
+- **QA:** audio fix focused review done; two-round QA not performed.
+
+## 2026-10-05/06: Session 9, audio fix install, torqued reconstruction and restore
+
+- Session start (~22:25 EDT): outer `main` @ `606c36b` = `origin/main` with the uncommitted session 8 docs; `dragal/custom` @ `c027a92857`, clean; WSL clone @ `c027a92857`, clean; `E:` volume UniqueId matches, write probe OK, ~243 GB free. Bundle sha256 re-verified (`a8accee3…4158`), and the bundle embedded in `install.sh` matches it.
+- **Audio fix install** (user confirmed: address `192.168.98.104` unchanged, device inactive indoors, no other SSH session; one SSH connection, 02:31:53–02:31:55Z, log `E:\DragalPilot\logs\device-install-audio-gate-20261005-223151.log`):
+  - pre-state: `IsOffroad=1`, `IsEngaged=0`, HEAD `82f58a9a8c`, clean, `DisableUpdates=1`, firmware file `206ea19c…`;
+  - bundle sha256 matched, `git bundle verify` OK, fast-forward to **`c027a92857`**, clean tree, firmware file unchanged;
+  - marker-read overhead on the device (inactive): 49 µs/read (missing file), 99 µs/read (small existing file). At 10 Hz for ≤ ~40 s per drive that is ≤ ~0.1% of one core, within the review's estimate (38–120 µs).
+  - **No reboot yet** (needs separate authorization); the change is not active until the restart.
+- **Reboot** (user: "Ok to restart"), 22:33 EDT: `precheck_reboot.sh` passed every check (offroad, HEAD `c027a92857`, clean, `DisableUpdates=1`, no staged update, firmware file `206ea19c…`); reboot issued 02:33:13Z (`logs/device-reboot-audio-gate-20261005-223311.log`).
+- **Post-boot check** (read-only, 02:35:40Z; `logs/device-postboot-audio-gate-20261005-223537.log`): `GitCommit=c027a92857`, clean, offroad, `DisableUpdates=1`, no updater, firmware file unchanged. The audio fix is active from the next onroad start.
+  - **Panda (observation):** the panda came up in bootstub; pandad recovered it and reflashed the unchanged image (expected signature `5b8d2b33…`) after 41 SPI retries, then connected. The session 8 swaglogs show the same sequence on at least two earlier boots, so it is existing behaviour, not caused by this change (`logs/device-postboot-pandad*-20261005-*.log`).
+- SSH connections this session (all serialized, closed): install 02:31Z (write, authorized), reboot 02:33Z (authorized), post-boot 02:35Z and three pandad log reads 02:36–02:40Z (read-only).
+- Pending: check drive (engage in the first ~40 s may show "Process Not Running: soundd (audio starting)") and a log pull afterwards.
+- **Torqued reconstruction (offline, no device access)**, [findings](docs/findings/2026-10-06-g70-torqued-reconstruction.md). Data: `E:\DragalPilot\analysis\g70-torqued-restore-20261005\`. Scripts: `E:\DragalPilot\scratch\wsl\torqued\`.
+  - **Inventory** (routes 8–0x16): all on `82f58a9a8c`, one restore key; route 0x0d didn't run torqued; route 8 starts empty; no points lost between routes.
+  - **Replay** of the checkout's unmodified `torqued.main()`.
+    - Criteria were fixed before comparing (`TOLERANCES.md`).
+    - **v1 failed** (frame phase, message receipt timing).
+    - **v2/v2b:** schedule locked to the logged publish times, plus a 0.7 ms receipt delay calibrated on route 8's first 400 s; disclosed as Amendment 1.
+  - **v2b result:** passes calPerc, valid flags, decay (exact), filtered values (≤ 0.0016 laf), raw-fit statistics and cache timing. **Fails D1/C1 and the output count**: 7,722 vs 7,723 points (routes a–0x16 are a constant −1; the cause is borderline decisions in routes 8/9).
+  - **Output:** `LiveTorqueParameters_end_route16_v2b.bin`, sha256 `2883e5da…`: valid, calPerc 100, laf 3.688 / friction 0.0808 / offset −0.072, decay 250. Restore check with the real restore path passes; a mismatched key or a missing PrevRoute means no restore.
+  - **Focused adversarial review:** done; 2 major, 2 minor, 3 info.
+    - **F3 fixed** (re-check on v2b).
+    - **F2 check run, post-hoc:** on held-out routes 0x18–0x1d the harness reproduces 6,702 of the device's actual 7,003 points exactly, with the same full-set fit (laf 4.1242 vs 4.1239).
+    - **F1 escalated:** the post-wipe cache is real device learning. Option B (merge) gives 8,665 points, laf 3.656 / offset −0.021 / friction 0.0846, against A's 3.616 / −0.096 / 0.0835.
+  - **Restore proposal drafted** ([proposal](docs/proposals/2026-10-06-g70-torqued-restore.md); script template `E:\DragalPilot\deploy\torqued-restore-20261006\restore.template.sh`; not built, not dry-run, not run). **Awaiting the user's choice (A or B) and authorization.**
+- **User decision: option A** (end of 0x16), with authorization to install and reboot if needed. B (merge) was my recommendation; the user chose A.
+- **Restore on the device** (user confirmed `.104`, indoors, no SSH sessions):
+  - **Attempt 1** (10:24:58Z) aborted before writing: plain `python3` over SSH lacks numpy.
+  - A read-only check found the manager's interpreter `/usr/local/venv/bin/python`. The script was fixed and dry-run again.
+  - **Attempt 2** (10:25:42–10:25:46Z): offroad, torqued not running, `c027a92857`, restore key OK; backups captured; payload `2883e5da…` written with `Params().put(block=True)`; readback equal (valid, calPerc 100, 7,722 points, laf 3.688). **No reboot** (not needed).
+  - Logs: `logs/device-torqued-restore-20261006-062454.log` and `-062539.log`.
+  - Backups: `deploy/torqued-restore-20261006/backup-device-20261006T102542Z/`. The previous device cache (7,003 post-wipe points) is preserved there and in the session 8 pull.
+  - Pending: check drive + log pull.
+- SSH connections (all serialized, closed): restore attempt 1 (write aborted), interpreter check (read-only), restore attempt 2 (write).
+- Handoff and kickoff: `docs/sessions/2026-10-06-s9-audio-torqued-restore-*`. Token usage: ~270k (the total_tokens counter). **QA:** torqued reconstruction focused review done; two-round QA not performed for either change.
+
+## 2026-10-06: Session 10, check drives for the audio fix and the torqued restore
+
+- Session start (~22:20 EDT):
+  - outer `main` @ `606c36b` = `origin/main`, with the uncommitted session 8 and 9 docs;
+  - `dragal/custom` @ `c027a92857`, clean; WSL clone @ `c027a92857`, clean;
+  - `E:` volume UniqueId matches, write probe OK, ~243 GB free.
+- **Device pull** (user confirmed `.104`, indoors, inactive, no SSH sessions). One read-only SSH connection, 2026-10-07 02:24:57–02:31:55Z.
+  - Script: `E:\DragalPilot\scratch\device\pull_all_20261006s10.sh`. Log: `logs/device-pull-20261006s10.log`.
+  - Pre-state: `IsOffroad=1`, `IsEngaged=0`, `c027a92857`, `DisableUpdates=1`; only this session's sshd.
+  - **Routes `0x1e`–`0x25`** (8 routes, 142 segments, 2026-10-06 06:34–20:48 EDT): rlog + fcamera + ecamera, 426 files. All sha256 MATCH after extraction and after promotion (`logs/promote-20261006s10.log`). Promoted to `recordings/2026/10/06/` with provenance.
+    - Gap: route `0x21` segment 33 is 0 bytes for all three files (route end). Kept as received.
+    - No driver video (`RecordFront=0`).
+  - **Diagnostics** (swaglogs, boot and crash logs, params, `/var/log`, dmesg, journal, processes): 909 files in `device-logs/2026-10-06_s10_diag/`.
+    - 902 match the device hashes at the final location (`final-verify.txt`).
+    - 5 files the device was still writing during the pull differ: 2 ping-time params, `UptimeOffroad`, `syslog`, `auth.log`.
+    - `tar` exit 2 for the root-only `var/log/btmp` and `var/log/private`, the same as in session 8.
+  - Deleted the staging folder `temporary/device-pull-20261006s10` (11.9 GB tar + manifest copies) after the hash checks. The manifests are kept in `logs/` and `device-logs/`.
+- **Audio fix (`c027a92857`): works as designed on all 8 drives.** Details in the [audio proposal](docs/proposals/2026-10-05-soundd-audio-gate-deploy.md) check-drive record.
+  - Every boot logged "soundd stream started", "micd stream started" and "soundd audio stream ready". soundd took 7.2–31.3 s to open its stream.
+  - No soundd/micd crash and no new crash files.
+  - `processNotRunning` appears only in the first 11–31 s of each route.
+  - One engage attempt at 14 s (route `0x23`) was refused with "soundd (audio starting)", as designed.
+  - Route `0x21` needed 31.3 s, beyond the old ~30 s retry window. Whether alerts were audible is not in the logs.
+- **Torqued restore: confirmed.** Details in the [restore proposal](docs/proposals/2026-10-06-g70-torqued-restore.md) check-drive record.
+  - All 8 starts fingerprint `GENESIS_G70_2024`, and torqued logged "restored torque params from cache" on each.
+  - The first message of `0x1e` equals the restored file: 7,722 points, valid, calPerc 100, decay 250, laf 3.688.
+  - Learning continued: 8,576 points and laf 3.547 at the end of `0x25`, which matches the device's cache at the pull.
+  - `CarParamsPersistent` changed only in the order of its `carFw` entries; the restore key is unchanged.
+- **Other device-log observations** (all pre-existing):
+  - No error-level swaglog message types that weren't in the session 8 logs.
+  - The panda booted in bootstub and pandad reflashed it on the route `0x24` boot (also on the session 9 reboot and the current boot).
+  - `interruptRateCan2` panda fault on `0x1f`, `0x20`, `0x21`, `0x25` (known since session 3).
+  - locationd kalman resets after GPS position/orientation jumps (9 in total).
+  - One 0.16 s "Touch Steering Wheel: No Face Detected" alert on `0x1e`.
+- **Tools:** new scripts `scratch/wsl/sng/{s10_torqued_check,s10_swag_summary,s10_audio_rlog,s10_cp_diff,s10_old_valid}.py/.sh` and `run_s10.sh`. `drive_extract.py` and `s8_audio_timing.py` reused unchanged. Outputs in `analysis/g70-s10-checkdrive-20261006/`.
+- No code changes, no device writes. QA: not applicable (verification of earlier deployments from logs).
+- **Steering "twitch" investigation** (user clarification: the main complaint is a twitchy wheel making constant small corrections on straight roads, not only the weave). Details: [findings](docs/findings/2026-10-06-g70-steering-twitch.md).
+  - **Inputs:**
+    - the 4 device bookmarks (routes `0x22`, `0x23`);
+    - the user's 5 phone wheel videos, copied unchanged from `C:\Videos` with sha256 into the routes' `videos/user-phone-wheel/` (`logs/user-wheel-videos-20261006s10.sha256`); the originals are left in place.
+  - **Plan:** the analysis plan, definitions and attribution criteria were written before computing.
+  - **Deviations, found while checking inputs:** `carState.yawRate` is 0 on this car, so straightness uses the curvature measured from the steering angle; the steering-rate signal is too coarse.
+  - **Results:**
+    - The twitch is a **hold-and-jump** wheel motion on straight highway: holds of 0.5–1.5 s, jumps of 0.3–0.6°, every 1.5–2 s.
+    - **P and the friction-ramp term carry 75–83% of the command's 0.7–4 Hz variance**; the model's input jitter is unchanged across eras.
+    - At highway speed after the torqued restore: jumps 19 → 30/min, reversals 16 → 27/min, fast angle RMS +48%. The proportional gain is +13% (friction 0.070 → 0.083, laf 4.0 → 3.63). The original port tune was about twice as twitchy.
+    - Mechanism (stick-slip with the error-driven friction ramp) is a supported hypothesis, with no closed-loop test.
+  - **Video** (background agent; coordinator checked the summary and a plot): wheel rotation measured relative to the dash, noise about 0.02–0.06°. The `0x22` clips match the logged angle in the fast band (r 0.49–0.90) and show the same hold-and-jump steps. The `0x23` clips are inconclusive (one too dark, one at the noise floor). `creationdate` is the clip start.
+  - **Tools:** `scratch/wsl/sng/s10_{twitch,twitch_table,spectra_plot,window_plot,jumps,check_yaw}.py`, `run_s10_vid.sh`; `scratch/wsl/vidwheel/`. Outputs in `analysis/g70-twitch-20261006/`.
+  - No code or device changes. Options listed for the user (findings §7).
+
+## 2026-10-07: Session 10 (continued), root cause of the twitch: stick-slip model
+
+- **User:** "Even pre-restore settings were twitchy. I want to find the root cause. Do #1 [offline stick-slip model] and expand the data you test to earlier routes as well." Plan pre-registered in [root-cause findings](docs/findings/2026-10-07-g70-twitch-root-cause.md) before computing; Amendments 1–3 recorded before their runs.
+- **Data:** all engaged routes, eras E1–E4 (routes 4–`0x25`). Route `3` was re-extracted but has no lateral-active samples.
+  - New dataset: the per-sample vehicle-model map from each route's carParams reproduces V0's logged measurement (p99 ≤ 0.004 m/s²).
+  - Tool install: numba 0.68.0 into `~/venvs/vid` (standing authorization).
+- **New observation (exploratory):** while engaged, the EPS output torque has sharp 20/40 Hz lines (a pulse about every 50 ms), and the column torque shows a 12–20 Hz hump. Absent in manual driving and at standstill; present in every era.
+  - Raw-CAN folding: the pulse is not locked to MDPS12 frames, our LKAS11 sends or the 0x485 `LFAHDA_MFC` (20 Hz; `SEND_LFA` set). Frequency 19.92 Hz.
+  - Source unresolved; timeboxed.
+- **Step 1 (all eras, 55+ mph straight):** the same stick-slip everywhere, including the original port tune.
+  - The wheel holds about 0.4° short of the controller's target while the command rises about 30 counts, then jumps 0.3–0.4° (a lateral step of about 0.15 m/s²).
+  - The EPS output torque tracks the command during holds (within-hold correlation 0.87–0.91), so it is **mechanical static friction, not an EPS deadband**.
+- **Step 2 (model):**
+  - Open-loop fits (bounds widened, Amendment 1) **failed** the held-out check.
+  - The closed-loop identification on E2+E3 (Amendment 2) **passes on held-out E1 and E4**: jumps within −9…+14%, hold within 0.08, T RMS within 5%, W within 7%, ordering E3 < E4 < E1 reproduced. Static friction ≈ 3× kinetic.
+  - Numba loop bit-exact vs the Python reference.
+- **Step 3 (ablations):** no single ingredient is necessary by the pre-registered rule.
+  - Controller friction term off: −55/−57% jumps. Request smoothing: −68/−55%. KP halved: −26/−29%.
+  - No dry friction makes it worse. The 20 Hz staircase and quantization are not implicated.
+- **Root cause (model-supported, 55+ mph):** a stick-slip limit cycle from steering static friction × V0's error-driven friction-compensation ramp (plus P) × small fast jitter in the model's request. The parameters only set its strength, which explains why every era twitches.
+- **Step 4 (candidates, Amendment 3 criteria):** none passes. Closest is C6 (friction ramp 0.3 → 1.0 + causal 2 Hz request filter): twitch −57/−58% jumps, −43/−41% T RMS, but mean tracking error +14/+23% (limit 20%), and E1's curve ratio is outside 0.95–1.04 (as is E1's baseline). Every twitch reduction costs a little tracking error (0.046 → 0.056 m/s² on E4).
+- Scripts: `scratch/wsl/sng/s11_*.py`, `s10_canpulse*.py`, `s10_eps_*.py`. Data: `analysis/g70-twitch-rc-20261007/`.
+- No code or device changes. QA: not applicable (analysis); a focused review of the model/harness has not been done.
+- **User chose option 2** (mechanism-targeted candidates). Amendment 4 was pre-registered before running. Harness checks: defaults still bit-exact; option limit cases exact.
+  - **One candidate passes all criteria: D2C4** = `steeringAngleDeadzoneDeg` 0.4° (the existing per-car friction deadzone) + a causal 2 Hz low-pass of desiredCurvature.
+    - Held-out E1/E4: jumps −57/−52%, T RMS −42/−39%, W −9/−22%, mean error +14/+19.4% (limit 20%).
+    - Curve ratio 1.061 / 1.027.
+  - **Others fail:** D2 alone (−41/−37% jumps but T only −23/−21%); shifted deadzone D3 (E1 curve); request-change friction J1/J2/H1 (no help or worse); P deadzone P1 (error +37/+32%).
+  - **Exploratory robustness** (plant ±30% friction, ±50% delay, ±20% stiffness): the D2C4 twitch reduction holds (jumps −47…−62%, T −37…−44%), but its tracking cost is +10…+24% (above 20% on E4 in 4 of 10 cases). So the tracking pass is marginal.
+  - Source fact: torqued's restore key excludes the deadzone.
+  - Nothing proposed for the device. Next: focused review of the model/harness, D2C4 step/curve-entry tests, M band, then a decision on an on-car A/B.
+- **Session 10 closed** with a detailed handoff/kickoff `docs/sessions/2026-10-07-s10b-d2c4-validation-*` (user request).
+  - It covers the 4 next steps: focused adversarial review → offline D2C4 checks → car-scoped implementation and full QA → on-car A/B with authorization.
+  - It also defines how every analysis reports **wheel jitter, weaving and overall comfort** (comfort metrics from livePose/IMU and column torque, to be pre-registered).
+  - The earlier s10 pair is kept as the mid-session record.
+- **QA status:** no focused review of the session 10 analysis yet; two-round QA not performed for any change.
+- **Usage:** no reliable cumulative figure (one compaction in this session).
+
+## 2026-10-07: Session 11, D2C4 validation: step 1 (focused review) and step 2e/2f
+
+- Session start (~11:18 EDT), from the [s10b kickoff](docs/sessions/2026-10-07-s10b-d2c4-validation-kickoff.md):
+  - outer `main` @ `606c36b` = `origin/main` with the 22 uncommitted session 8–10 doc paths;
+  - `dragal/custom` @ `c027a92857`, clean; WSL clone @ `c027a92857` (detached at FETCH_HEAD), clean; no WSL jobs;
+  - `E:` UniqueId matches, write probe OK, 230 GB free. No device access this session.
+- New findings doc: [D2C4 validation](docs/findings/2026-10-07-g70-d2c4-validation.md).
+- **Step 1, focused adversarial review** of the session 10 model/harness (one new agent; code, source, data and the pre-registered criteria only). No blocker; 10 findings, all verified by the coordinator and agreed:
+  - **Major:** D2C4's E4 tracking criterion depends on the θ0 window (+19.4/+20.6/+15.1% for 10/30/60 s; the plant was never identified in curves). E1/E4 were reused to design and choose the Amendment 4 candidates, so D2C4's pass is not an independent held-out confirmation. A7's jump change was a metric artefact.
+  - **Fixed in the harness** (originals kept as `*.s10.py.bak`): `latAccelOffset` added to the controller port; the integrator starts from the logged value (source fact: V0 never resets its PID); A7 metrics on the 0.1° angle; micro-reversals and steering-proxy comfort metrics added; the Python reference gained independent D2/C4 paths.
+  - **Checks:** production path vs Python reference bit-exact on 10 runs from all four eras × {V0, friction 0, D2, C4, D2C4}; Amendment 4 limit cases exact. Open-loop replay against the logged controller: the offset fix removes the offset residual (route `0x12` p50 6.4e-3 → 8.6e-5).
+  - **Re-run on the fixed harness** (`analysis/g70-d2c4-20261007/rerun_v2/`): adequacy still passes on held-out E1/E4; ablation and Amendment 3 verdicts unchanged; A7 not implicated.
+    - **D2C4 still passes the pre-registered criteria:** jumps −60/−50%, T −42/−37%, W −11/−20%, steering-proxy comfort −27…−54%.
+    - But E4 tracking is +19.3% (limit 20%) and above 20% in 4 of 10 plant perturbations, so the pass is marginal and, by finding 2, not independent.
+- **Step 2f (source check):** torqued, paramsd and lagd restore keys don't include `steeringAngleDeadzoneDeg`, so D2 keeps all learned state.
+- **Step 2e, comfort and weaving log baselines** (Amendment 5, pre-registered before computing):
+  - **Signals:** this revision logs `deviceMotion` (20 Hz), not livePose. The raw `accelerometer`/`gyroscope` (104 Hz) were extracted for all 23 engaged routes (`s12_imu_extract.py`, checkout venv): no drops, no gaps, time base equal to the existing extracts.
+  - **Validity gate** (IMU vs steering-derived lateral accel, |r| ≥ 0.8): E1/E2 pass, **E3/E4 fail (0.78/0.77), so their IMU comfort numbers are invalid by the rule**.
+    - Exploratory diagnostic: the IMU agrees with the gyro's v·yaw rate (r 0.85–0.91). The gate's reference contained V0's roll term and no vehicle lag.
+  - **Readings:**
+    - Steering-proxy comfort follows the jitter ordering (E1 > E4 > E2 ≈ E3).
+    - The IMU is dominated by road input in the twitch band: step events about 200/min in every mode, coherence with steering 0.06–0.33 above 0.7 Hz. So a raw-IMU on-car comfort criterion would be insensitive.
+    - The 20 Hz EPS line is engaged-only.
+    - Lane-offset weave is 0.044–0.051 m RMS in every era.
+- **Tool slip, no data affected:** the IMU runner was first started under Git Bash instead of WSL. It created only empty folders under `C:\Program Files\Git\mnt\e\DragalPilot\analysis\g70-d2c4-20261007\imu`, which the safety check would not let this session remove; left for the user.
+- No code change in `sunnypilot/`, no device access. QA: focused review of the session 10 harness **done**; two-round QA not applicable yet (no product change).
+- **User rule (2026-10-07): the VM is dedicated to this project**; analyses may use all its compute, memory and storage. Recorded in CLAUDE.md §8.
+  - **Parallelized, with results bit-identical to the serial method:**
+    - closed-loop identification: the optimizer stays serial (same search path), and each objective evaluation spreads its runs over 6 processes. Equal to the serial objective on 5 parameter vectors; about 3× faster per evaluation.
+    - `s11_eval.py` twitch and tracking sweeps: one route per process. Byte-identical JSON to the serial v2 outputs.
+    - `s11_robust.py`: one plant perturbation per process. Byte-identical.
+    - The micro-reversal counter is now numba-compiled (equal to the Python original).
+  - The E4-only identification for Amendment 6 was restarted in parallel. It was 5 minutes into the serial run and had written no output.
+- **Amendment 6, swap validation** (user's choice at the step 1 boundary; pre-registered before running). A plant identified in closed loop on E4 only, then the frozen D2C4 tested on E2 and E3, which played no part in choosing it.
+  - **Plant:** similar to the E2+E3 plant; adequacy passes on E2, E3 and E1.
+  - **D2C4 on E2/E3:**
+    - twitch and weave criteria pass: jumps −45/−52%, T −33/−41%, W −20/−25%;
+    - reversals −56/−58%; steering-proxy comfort −23…−57%;
+    - **tracking: E2 +21.0% fails the 20% limit**; E3 +19.6% passes.
+  - Across plant perturbations the tracking cost is +16…+25%. It is systematic, about +0.01 m/s² mean error.
+  - **Verdict: D2C4 fails the swap validation by the pre-registered rule (E2 tracking, by 1 point).** The twitch reduction replicates on independent data. Not carried to step 3 without the user's decision.
+- Data inventory: lateral control was never active at a standstill (no engaged stop-and-go data). 35–55 mph straight-clean data is 0–286 s per era.
+- **User decision:** accept D2C4's ~+20% mean-error cost as a recorded trade-off and test transients; also explore the CPU's advanced instruction sets for the tooling.
+- **Amendment 7, transient tests** (pre-registered; E4 plant primary, independent E2/E3 jitter and curves):
+  - **2a synthetic steps/sines:**
+    - rise times and overshoot unchanged (the torque rate limit dominates);
+    - inside steps with real request jitter, jumps −22…−66% and jerk −17…−65%;
+    - **red flags:** R5, sine phase lag at 0.6 Hz +17…+19.5° (limit 15°; the 2 Hz filter alone adds 16.7°); R3, a 0.3 m/s² step at 75 mph settles slower (a ~0.03 m/s² residual inside the deadzone).
+  - **2b logged curve entry/exit** (102 primary events):
+    - peak error +16%, lag +0.09 s (both within bounds);
+    - **mean in-window error +28% (red flag C3, limit 25%)**, consistent across θ0 windows, eras and plants;
+    - jumps −20% and jerk −5% inside curves.
+  - **Reading:** D2C4's tracking cost sits in transients: about 0.09 s of extra lag from the 2 Hz filter, plus a deadzone residual. Step 3 waits for the user.
+- **CPU:** AMD Ryzen 9 9955HX (Zen 5), 6 logical CPUs, full AVX-512. Numba already targets `znver5`, but the generated loop is scalar (a sequential recurrence).
+  - Profile of one objective evaluation: 70% closed loop (1.4 µs/sample), 14% jump/hold metric.
+  - A background agent is testing bit-identical speed-ups (ring buffers, O(n) metrics), AVX-512 lane-batched simulation and integrator accuracy, in new `s13_*` files only.
+- **User decision:** get D2C4 ready for installation once the device is available; next session tests milder variants. Separate install kickoff; project memory gets the CPU-instruction-set findings.
+- **Step 3, implementation** (`dragal/custom`, local; on top of `c027a92857`):
+  - **Commits:** `268040c361` (D2: `STEERING_ANGLE_DEADZONE_DEG = {GENESIS_G70_2024: 0.4}` in the Hyundai interface; C4: car-scoped 2 Hz `FirstOrderFilter` on `desired_curvature` in V0, updated every cycle, first-value init; 5 tests), `8593b66148` (float32 test tolerances), `66b22ef83f` (re-engagement test).
+  - **Tests:**
+    - 6/6 new tests pass;
+    - mutation checks: the pre-change source fails 3 of 5; an active-only filter fails the re-engagement test;
+    - 19 existing lateral tests OK; opendbc car suites OK (new runner `run_s11_car_tests.sh`).
+  - **Source = harness:** max 1.9e-5 counts over 311,849 active samples on 4 routes (`s12_source_replay.py`).
+  - **QA round 1 (cooperative):** no blocker or major. Fixed: a configuration guard (with NNLC or `EnforceTorqueControl` on, sunnypilot re-runs `configure_torque_tune` without the deadzone, so the install/reboot scripts refuse unless NNLC, EnforceTorqueControl, LateralJerkTorqueController and TorqueParamsOverrideEnabled are all off) and a test gap. Logging semantics recorded.
+  - **Erratum:** session 10's steering-angle → lateral-accel conversion (0.1° ≈ 0.045 m/s²) ignored the understeer factor. V0's map gives 0.020–0.029 m/s² per 0.1° at 25–33.5 m/s, so twitch jumps are ≈ 0.09–0.11 m/s² at 75 mph. The simulations are unaffected. Notes added to the root-cause findings.
+  - **QA round 2** (independent adversarial, review package of resulting code and neutral requirements only, remote isolation requested): running.
+  - **Deployment:**
+    - [proposal](docs/proposals/2026-10-07-g70-d2c4-deploy.md) drafted, including a pre-registered on-car A/B protocol;
+    - deploy scripts in `E:\DragalPilot\deploy\g70-d2c4-20261007\` (templates, `mk_install.sh`, `sim_install.sh`). The dry run at `8593b66148` passed install and rollback; to be regenerated at the final SHA.
+- **QA round 2 (independent adversarial, on `66b22ef83f`):**
+  - **Isolation:** self-contained package, no round 1 material; remote isolation requested but not confirmed, disclosed.
+  - **Major:** the G70 deadzone was reset to 0 when NNLC or `EnforceTorqueControl` re-runs the torque tune. **Fixed in code** (`89bbe60ab1`): the Hyundai `CarInterface.configure_torque_tune` now defaults the deadzone from its per-car table (sunnypilot calls it through the instance; other cars, generic code and Toyota unchanged). The install guard is kept.
+  - **3 minor test gaps fixed:** reference-recursion continuity across engagement with `reset()`; filtered value reaching jerk/feedforward/extension; deadzone edges at two speeds.
+  - Notes recorded. No disputes, so no tiebreaker.
+- **Final head `89bbe60ab1`:**
+  - 24/24 lateral tests; opendbc car suites OK; ruff/codespell clean;
+  - 6 mutants all caught (`s12_mutations.sh`);
+  - source replay unchanged.
+  - **Full two-round QA complete** (with the isolation caveat).
+- **Deployment artifacts at `89bbe60ab1`** (`E:\DragalPilot\deploy\g70-d2c4-20261007\`; bundle sha256 `b92cff36…b838`):
+  - dry run: install, precheck and rollback pass; the negative run with `EnforceTorqueControl=1` aborts.
+  - Proposal status: **ready for installation, not approved.**
+  - Deleted the superseded `8593b66148` bundle (rebuilt at the final SHA).
+- **CPU instruction-set exploration** (background agent, new `s13_*` files only; coordinator re-ran its main check: 11,414 checks, 0 mismatches):
+  - the sim loop is latency-bound (≈ 5 ns per Euler substep); the earlier 1.4 µs/sample profile was a JIT warm-up artifact;
+  - the real hot spot was the whole-route θ0 convolution per run;
+  - **`s13_sim.py` is ≈ 11× faster serial, 8× with 6 processes, bit-identical** (not yet wired into the s11/s12 scripts);
+  - AVX-512 lane batching across independent sims: 2.9×/core, bit-exact (prototype);
+  - FMA/fastmath: no metric changes;
+  - 10 substeps slightly unconverged (≤ 2% on jumps/min).
+  - Saved to project memory (`cpu-simd-tooling`).
+- **Session 11 handoff:** [handoff](docs/sessions/2026-10-07-s11-d2c4-ready-handoff.md). Kickoffs: [milder variants](docs/sessions/2026-10-07-s11-milder-variants-kickoff.md) (next session), [install only](docs/sessions/2026-10-07-s11-d2c4-install-kickoff.md) (when the device is available).
+- **Moved and deleted:**
+  - QA evidence moved from `temporary/` into `analysis/g70-d2c4-20261007/qa/`;
+  - deleted `temporary/s12-smoke` (IMU smoke extract, superseded by the full extraction) and `temporary/s11-evalpar` (copies verified byte-identical to the kept outputs).
+- **QA status:** D2C4 `89bbe60ab1`, full two-round QA done (round 2 isolation not confirmed as enforced). Harness: focused review done. Nothing installed.
+- **Usage:** no reliable cumulative figure.
+- **D2C4 INSTALLED on the device** (user: "…192.168.98.104, it is inactive and no other SSH is active. Install and reboot when needed."):
+  - **Install:** one SSH connection 17:33:31–33Z: `c027a92857` → `89bbe60ab1`, bundle hash OK, clean, firmware unchanged, configuration params off; filter overhead 0.59 µs/call on the device.
+  - **Reboot** 17:33:54Z after all prechecks passed; back in 59 s.
+  - **Post-boot (read-only, 17:36Z):** `GitCommit=89bbe60ab1`, clean, offroad, firmware unchanged, learned-state files byte-identical.
+  - Logs: `logs/device-{install,reboot,postboot}-d2c4-20261007-*.log`. Record: [proposal](docs/proposals/2026-10-07-g70-d2c4-deploy.md) deployment record.
+  - **Next:** user A/B drives (proposal §6), then an authorized read-only pull. The cache files show a probable drive at ~17:27Z today, not yet pulled.
+  - SSH: no connection open.
+- **Deprecated** the install-only kickoff (D2C4 is installed). The milder-variants kickoff now says D2C4 is installed and adds rules for running alongside a parallel log-pull/analysis session: no checkout/WSL clone changes, no in-place edits of shared scripts, ≤ 4 CPU workers, append-only edits of shared docs.
+- **New kickoff (parallel session):** [remote pull + A/B analysis](docs/sessions/2026-10-07-s11-remote-pull-d2c4-ab-kickoff.md). The device is out of the car at the user's partner's workplace.
+  - First: research the openpilot/comma remote SSH proxy (requirements, credentials, read-only safety), then stop and ask.
+  - Then, with authorization: an rlogs-only pull of the 13:27 EDT "A" drive and the D2C4 drives.
+  - **One-time user-authorized exception to the CLAUDE.md §3 video rule:** videos deferred and recorded as gaps; to be pulled over the LAN later.
+  - Then pre-registered A/B analysis against proposal §6.
+
+## 2026-10-07: Session 11r (parallel), remote SSH proxy research (part 1 of the remote-pull kickoff)
+
+- Session start from the [remote-pull kickoff](docs/sessions/2026-10-07-s11-remote-pull-d2c4-ab-kickoff.md):
+  - `dragal/custom` @ `89bbe60ab1`, clean; WSL clone @ `89bbe60`, clean;
+  - `E:` UniqueId matches, write probe OK, 229.6 GB free.
+  - **No device access.**
+- New findings doc: [remote SSH proxy](docs/findings/2026-10-07-remote-ssh-proxy.md). Summary:
+  - ssh.comma.ai relays an end-to-end SSH session to the device's own sshd through athenad's `startLocalProxy` (port 22 only). It needs comma prime and the device powered and online; it cannot wake the device.
+  - Observation (2026-10-06 params pull): `PrimeType=5` (counts as prime), `SshEnabled=1`, and `GithubSshKeys` is exactly our `id_ed25519_dragalpilot` key, so no new credentials are needed. The dongle ID stays on `E:`.
+  - sunnylink has a device-side proxy (no TLS verification on its proxy socket) but no documented client path; not used.
+  - Pull estimate ≈ 0.65–0.7 GB of rlogs per driving hour; throughput through the proxy is unmeasured.
+  - Plan: one listing/manifest connection, then sequential per-route tar batches verified by sha256, resumable per file. The device host key is pinned to the LAN-recorded one; ssh.comma.ai's key is checked against the documented fingerprint.
+- Stopped at the research boundary to ask the user for confirmations and authorization.
+- **Remote pull (part 2; user-authorized):** user: device powered, comma prime active, not in a car, no other SSH; "all connections are authorized for this log pull"; one drive after the install.
+  - ssh.comma.ai host key matched the documented fingerprint (stored in `E:\DragalPilot\cache\ssh\known_hosts.comma-proxy`; `~/.ssh/known_hosts` unchanged). The device host key was pinned to the LAN-recorded one.
+  - Four sequential read-only connections, 18:59–19:03Z (device offroad on Wi-Fi, `89bbe60ab1`, configuration params off, only our session). The first was a listing with on-device sha256 and the small param files; then one tar per route at about 6.5 MB/s.
+  - **71 rlogs** (routes `0x26`, `0x27`, `0x28`; 789 MB), all sha256 MATCH, promoted to `recordings/2026/10/07/`. No qlogs, no qcamera.
+  - **Videos deferred** (one-time exception): listed per segment in each route's `metadata/GAPS.md`; to be pulled over the LAN.
+  - Logs: `device-logs/2026-10-07_s11r_remote/`. Staging folder `temporary/device-pull-20261007s11r/` emptied and removed (batch tars deleted after verification; all files promoted or moved).
+  - Tool slip, no effect: the local "no other proxy ssh" guard used `pgrep`, which Git Bash lacks, so it was a no-op. The connections were serial anyway.
+- **Confirmed from the logs** ([on-road A/B findings](docs/findings/2026-10-07-g70-d2c4-ab-onroad.md) §2):
+  - `0x26` (06:27 EDT) and `0x27` (13:06 EDT) ran `c027a92857`; `0x28` (13:41 EDT) is the only D2C4 drive (`89bbe60ab1`), with CarParams `steeringAngleDeadzoneDeg` 0.4.
+  - NNLC, LateralJerkTorqueController and TorqueParamsOverrideEnabled were 0 and EnforceTorqueControl absent at every route start.
+  - torqued (swaglog line plus continuity), lagd (exact continuity) and paramsd (cached, non-default values) restored on D2C4.
+  - `0x27` logged no GPS at all; its start time comes from the synced system clock.
+- **Inventory and road matching** (new tools `s14_gps_extract.py`, `s14_ab_inventory.py`, `s14_ab_match.py`; shared scripts unchanged):
+  - B's road and direction were also driven on A software by `0x26` (the same morning, dark), `0x1e` (2026-10-06, dark), `0x20`, `0x22` (day) and `0x24` (dark).
+  - B has 6.6 min of straight-clean ≥ 55 mph and 9 curve events, below proposal §6's per-arm minimum.
+- **Pre-registration** written (findings §3) before any outcome metric. Stopped to ask the user (the data differ from §6) and to collect the driver's impression. IMU extraction for the three routes running.
+- **User decision:** "Go ahead and analyze the data we have, we should have more later. My partner is the driver so I don't have the subjective data yet…" Pre-registration applied unchanged; the driver's assessment is pending.
+- **Preliminary on-car A/B results** (findings §4; new `s14_ab_metrics.py`, 4 workers). B = `0x28` vs A-primary = 5 same-road, same-direction `c027a92857` drives:
+  - **jitter pass:** jumps −42%, T −39%. But the midday A drive `0x20` is lower than B, so the reduction is within the day-to-day range.
+  - **weave fail:** W +18.4% (limit 15%; CI includes 0). Lane-offset 0.2–0.7 Hz +41% (CI excludes 0).
+  - **comfort pass:** jerk −23%; IMU not evaluable (A gate r 0.775).
+  - **tracking pass:** mean error +27%, curve lag +0.094 s.
+  - **Overrides and the driver's assessment pending.**
+  - The transient costs match the model's predictions. *Hypothesis:* C4's phase lag (R5) drives the weave increase.
+- **Focused review** (one independent adversarial agent) of the analysis script: no blocker or major; 4 minor reporting findings, agreed and recorded (findings §5); no verdict changes.
+- **Handoff:** [s11r handoff](docs/sessions/2026-10-07-s11r-remote-pull-ab-handoff.md). **Kickoff:** [A/B follow-up](docs/sessions/2026-10-07-s11r-ab-followup-kickoff.md).
+- No code change in `sunnypilot/`, no device change. SSH: none open. QA: focused review of the analysis done.
+- **Updated the [milder-variants kickoff](docs/sessions/2026-10-07-s11-milder-variants-kickoff.md)** (user request; it had not been run yet) with session 11r's on-car results:
+  - twitch reduced and transient costs as predicted, but weave worse (W +18%, lane-offset 0.2–0.7 Hz +41%), which the model did not predict.
+  - Leading hypothesis: C4's phase lag acting through the outer loop, which no existing model includes.
+  - The session's scope widens to "milder variants or another approach". Weave must be modelled first: a log check of the request, then an outer-loop model validated against the D2C4 drive, or a declared proxy. 0x28 is to be used as a plant check.
+  - The weave criterion adds the lane-offset 0.2–0.7 Hz band. The candidate set needs the user's OK before the grid runs.
+
+## 2026-10-07: Session 12mv, weave modelling and milder twitch fixes (offline)
+
+- Session start (~16:05 EDT) from the [milder-variants kickoff](docs/sessions/2026-10-07-s11-milder-variants-kickoff.md):
+  - outer `main` @ `606c36b` + 32 uncommitted doc paths; `dragal/custom` @ `89bbe60ab1`, clean; WSL clone @ `89bbe60ab1`, clean; no WSL jobs;
+  - `E:` UniqueId matches, write probe OK, 228.8 GB free. **No device access this session.**
+- New findings doc: [milder variants](docs/findings/2026-10-07-g70-milder-variants.md). Outputs `analysis/g70-milder-variants-20261007/`; new scripts `scratch/wsl/sng/s15_mv_*` (shared scripts imported, not edited); ≤ 4 workers (parallel-session rule).
+- **Exploratory semantics** (fit-set routes only, before the pre-registration): lane lines are y-right; the logged request is the model's output 1–2 cycles later; about half of the lane offset's 0.2–0.7 Hz motion is the car's own (gyro); the request follows the lane offset with a ~50° lead (an outer loop exists). A bug in the first exploratory run (auto-spectra summed per pair) was fixed and re-run.
+- **Pre-registration** of steps 2a, 2b, 2c and 3 (findings §2), before any of their metrics.
+- **Step 2a (log check):** B's request weaves more in 0.2–0.7 Hz (+32%, CI +13…+51%, above every A drive). The full-band request → wheel phase is not more lagged (−6.9°, CI includes 0). By the pre-registered rule: an exogenous request change, not attributable to D2C4 on this data. Outside the rule: 0.2–0.4 Hz lags 18° more; lane → request coherence 0.71 vs 0.38; **B's request jitter band (0.7–4 Hz) is 20% lower**, so part of the on-car twitch reduction came with a calmer request.
+- **Step 3 (`0x28` plant check):** the plant with D2C4 fails adequacy on hold (+0.117 / +0.141 vs ±0.10); jumps, T, W within limits. The real D2C4 drive twitched more than predicted (22.0 vs 16.1 jumps/min). The model reproduces D2C4's weave-band phase, but its A0 lags 13° less than the real A drives, so it over-predicts D2C4's added lag (+22° vs +7° observed). A0 adequacy on B's road passes with the E4 plant.
+- **Step 2b:** the lane → request ARX policy model is stable but explains only 14.9% of the held-out request weave band (criterion ≥ 20%). **Not adequate**; the closed-loop outer-loop simulation was not built. **Step 2c (declared phase-lag proxy) applies.**
+- **User decision:** all 9 proposed candidates (MV1–MV9: deadzone 0.5/0.6°, continuous deadzone 0.3/0.4°, D2 + 4/3 Hz, continuous 0.3° + 4 Hz, D2 + shelf filter, D2 + friction-path-only filter); red flags reported only. Pre-registered as **Amendment 8** ([validation findings](docs/findings/2026-10-07-g70-d2c4-validation.md) §4) before any run.
+- **Harness** (`s15_mv_var.py`, new loop copy with a friction-path request; θ0 cached per route). Checks:
+  - bit-exact vs `s11_eval.simulate` for 5 variants × 12 runs;
+  - shelf and friction-path limit cases exact;
+  - Amendment 7 transients (144 entries) and curves (21 keys) reproduced identically;
+  - Amendment 6 twitch/tracking (40 keys) reproduced identically.
+  - New transient runner needed: `s12_transient.run()` ignores `fr_dz_shift`.
+- **Amendment 8 result: no candidate passes.** All fail the weave proxy: 15–19° of added weave-band lag (67–87% of D2C4's; bound 25%) and gain −15…−19%. MV2, MV3 and MV7 meet the twitch and tracking criteria on E2 and E3. Every candidate except MV7 drops D2C4's R5 and C3 flags; the no-filter deadzones have about half D2C4's curve lag.
+- **Exploratory split:** with logged requests, D2 alone adds 12–13° of weave-band lag (gain −16%) and C4 alone about 10° (−5%). The deadzone, not only the filter, slows small weave corrections; the 0.3 m/s² sines of Amendment 7 hid this.
+- **Recommendation (findings §4):** keep D2C4 while the A/B follow-up collects data. No variant is shown to be better on weave. If weave is confirmed worse on D2C4, MV3 or MV2 would halve the transient cost but are expected to weave about as much; the rollback is the other option.
+- **Focused review** (one independent adversarial agent) of the session's analysis scripts: no blocker or major; 3 minor and 4 notes, all verified and agreed; no verdict changes (findings §5).
+  - Fixed: the θ0 cache key (latent stale-reuse risk; a full re-run with recomputed θ0 was identical; checks re-run, PASS).
+  - Recorded deviations: 2a's transfer estimate used ≤ 60 s pieces (whole-run phase difference −5.6° instead of −6.9°); step 3 pooled RMS as a mean square.
+- **Handoff:** [s12mv handoff](docs/sessions/2026-10-07-s12mv-milder-variants-handoff.md). **Kickoff:** [weave attribution](docs/sessions/2026-10-07-s12mv-weave-attribution-kickoff.md).
+- No code change in `sunnypilot/`, no device access. SSH: none. QA: focused review of the analysis done. Usage: no reliable cumulative figure.
+- **Follow-up to the user's question** about attributing the weave (findings §6; exploratory, post hoc):
+  - speed doesn't explain it (B 32.6 m/s vs A 29.4–34.4);
+  - in curvature units and pairwise on the exact same road samples, B's request, wheel and lane weave are above every A drive;
+  - against the light-matched midday drive `0x20`: request +9%, wheel +21%, lane +30%, request jitter −1%.
+  - **Revised reading:** the "exogenous" reading of step 2a was too blunt (the request is inside the closed loop). D2C4 is the most likely cause of the weave increase (one B drive; date and traffic not excluded). B's calmer twitch-band request was probably a daylight effect. The "keep D2C4" recommendation loses that support.
+- **User:** "I'd rather find a logical defensible root cause for the weave in D2C4 because it seems to have addressed a lot of the other concerns." Pre-registered and ran a log decomposition (findings §7–8; `s15_mv_rc.py`). On B the logged setpoint is post-filter, so the car data separate C4 from the rest of the loop.
+  - C4 lags exactly as designed (7.8° / 12.1° in 0.2–0.4 / 0.4–0.7 Hz).
+  - At 0.2–0.4 Hz the wheel lags the request 18° more on B (CI −27.8…−10.5): 8° from C4 and 10° after it (the deadzone part, CI excludes 0). The small-amplitude response is weaker and later. Time in wheel holds rose from 40% to 59%; tracking-error weave +18%, twice as coherent with the lane offset.
+  - **The stick-slip model predicts this split at 0.2–0.4 Hz** (D2C4 17–18°: C4 7°, D2 9–10°); it over-predicts at 0.4–0.7 Hz.
+  - Verdicts: H1 (filter lag) supported; H2 (deadzone) partial (the full-band criterion fails, the sub-band passes); H0 (not D2C4) not favoured.
+  - **Root-cause reading:** D2C4 costs about 18° of phase in the lane-keeping loop at its weave frequency, roughly half from each part, so the loop is less damped.
+- Decisive next test: on-car isolation (a D2-only and a C4-only build on the same road).
+- **User:** "Let's see how far we can get with this while simulating locally." Wrote the end-of-session [handoff](docs/sessions/2026-10-07-s12mv2-weave-twitch-sim-handoff.md) and [kickoff](docs/sessions/2026-10-07-s12mv2-weave-twitch-sim-kickoff.md) for an offline session.
+  - It starts from D2C4 and refines it to address weave and wheel jitter together.
+  - It first brainstorms new analysis/simulation methods (outer-loop digital twin, the driving model in the loop via the checkout's modeld/process_replay/tools/sim, describing-function analysis, loop-margin estimation, event-triggered and position-aligned analysis, surrogate optimisation, plant-uncertainty Monte Carlo).
+  - The weave criterion proposed for pre-registration: the car-validated 0.2–0.4 Hz in-context lag.
+  - Observed for the brainstorm (source presence only, runnability unverified): `openpilot/tools/sim`, `tools/lateral_maneuvers`, `process_replay/model_replay.py`, the tinygrad driving model.
+  - Pending: focused review of the root-cause scripts. No device access, no `sunnypilot/` change. Workspace rechecked ~18:00 EDT; `E:` 213 GB free.
+
+## 2026-10-07: Session 13ws, refining D2C4 for weave and jitter (offline and local simulation)
+
+- **Session start** (~17:59 EDT) from the [weave + twitch simulation kickoff](docs/sessions/2026-10-07-s12mv2-weave-twitch-sim-kickoff.md):
+  - outer `main` @ `606c36b` + 37 uncommitted doc paths;
+  - `dragal/custom` @ `89bbe60ab1`, clean; WSL clone @ `89bbe60ab1`, clean; no WSL jobs; no parallel session found;
+  - `E:` UniqueId matches, write OK, 228.8 GB free.
+  - **No device access, no `sunnypilot/` or WSL-clone change.** New findings doc: [weave + twitch simulation](docs/findings/2026-10-07-g70-weave-twitch-sim.md).
+- **Brainstorm first** (findings §1–2):
+  - checkout feasibility survey: the shipped driving model is QCOM-compiled, the ONNX is in upstream LFS, sunnypilot has a camera-offset reprojection helper, `tools/sim` is MetaDrive only with no torque steering;
+  - a Bode argument: linear filters can't separate jitter from weave;
+  - fixes F1–F9 and methods M1–M12, ranked.
+  - **User: "All approved"**: plan phases A → B, C (driving model) in parallel; the decision rule with a "partial" tier; the ONNX download.
+- **Amendment 9 (phase A), pre-registered:**
+  - harness `s16_ws_var.py` (new options F1 split deadzone, F2 slow friction input, F3 play operator, F4 soft deadzone, F7 breakaway release), with checks 1–3 bit-exact / identical (456 stored keys);
+  - **no candidate passes**; the frontier is mapped;
+  - **F7a** cuts jumps −31 / −34% for +2.2 / +2.6° of 0.2–0.4 Hz lag and +1% tracking, but T only −9 / −12%;
+  - the M1 lock-in readout is not consistent with the car-validated estimator (reported only).
+- **M6 log analyses:**
+  - jumps follow the slow request's reversals, toward the request (97–99%); the fast jitter plays a minor role. The trigger sign was corrected after the review.
+  - On the car D2C4 starts small corrections 0.4–0.6 s later (1.56 vs 0.92 s); the model matches A0 and over-predicts D2C4.
+- **Amendments 10–10d (phase B), each pre-registered before its run:**
+  - F7 family, combinations, F6 lead (worse, as Bode predicts), F8 feedforward scale;
+  - transients: F7a/F7d 1 red flag vs D2C4's 8; curve +2–3% vs +28%;
+  - **robustness: F7 fails at td ×1.5** (its benefit needs the release to arrive before the jump ends);
+  - jump-profile check: the model's jump timing matches the car (t90 150–180 ms);
+  - exploratory: the EPS torque follows the command with t50 about 23 ms;
+  - 288-point search: no pass, and no partial; **T −30% costs about 10.5° of lag; the F7 frontier dominates D2C4** (about 6° less lag and a quarter of the tracking cost at equal T).
+- **Driving model in the loop (phase C):**
+  - `driving_supercombo.onnx` from LFS, CPU-compiled with the checkout's tinygrad (apt clang 18 installed); it is the installed model;
+  - **reproduces the logged modelV2 at r 0.9997** (verified by the coordinator);
+  - M4(b) open-loop policy probing (Amendment 11, window rule amended as 11a before any result): the real policy is a phase-leading corrector (+45–57°) with about 2× the closed-loop gain estimate, and **not linear** (13–23% less gain at half amplitude) → by the pre-registered rule the linear outer-loop twin (Amendment 12, code and checks ready: `s16_ws_twin*.py`) is not built.
+- **Focused adversarial review** (one independent agent; findings §9): no blocker or major.
+  - Fixed: the F7f/g initial hold torque (re-run: only F7f/g change, ≤ 1 point).
+  - Recorded: the hold-count reading sensitivity, the s12mv T3 censoring (directions unchanged), the M6 sign note (re-analysed), and notes.
+  - **The s12mv root-cause scripts are now reviewed.** The twin code (written after the review started) is not reviewed.
+- **Conclusions** (findings §10): no candidate meets the rule. Candidates to carry: F7d / S1 (jumps −40…−44%, lag ≤ 4.6°, tracking ≤ +2%, but T only −14…−20%).
+  - **User decisions pending:** run M4(c) (the model in closed loop); decide whether the felt twitch is jump count or jump size; no `dragal/custom` change without asking.
+- **Tooling** (docs/baseline.md): offline driving model on the x86 CPU. Outputs `analysis/g70-weave-twitch-sim-20261007/`; scripts `scratch/wsl/sng/s16_ws_*`, `scratch/wsl/s13ws_model/`; logs `logs/s13ws-*`.
+- **Deleted** (superseded scratch, cleanup rule):
+  - `temporary/s13ws_check4/` (a check-4 grid copy; the comparison was logged);
+  - `temporary/s13ws_syn*.json`, `temporary/fp_body.txt`, `temporary/patch_tr.txt`;
+  - `model_probe/test.npz` (12-frame test output).
+- SSH: none. QA: focused review of the analysis done; twin code review pending. Usage: about 290k tokens by the context counter (no per-session meter).
+- User clarification (findings §10.5): the complaint is the wheel visibly stepping by itself while engaged on straight roads (session 10 videos), not feel in the hands; F9 (dither) reopened as a hypothesis.
+- User decision: dither (F9) is not acceptable (unnecessary steering-rack wear); closed.
+- User question (2024 G70 "V1.5" components): GENESIS_G70_2024 is its own platform, but the steering controller path and default torque limits are shared Hyundai classic-CAN code; no other car shares the EPS or radar; the EPS firmware family is unknown to comma; the radar is the CAN-FD generation and its bus-1 traffic matches opendbc's CAN-FD FRONT_RADAR/ADRV messages exactly (fingerprint findings update; s16_ws_bus1.py).
+- Torque limits and ADRV_0x51 (fingerprint findings update): the stock camera's LKAS11 max observed 218 (8.8 min active; lower bound), up/down steps to 7/6 vs our 384 and +3/-7; our up-rate limit is active in 67% of rising steps. ADRV_0x51 carries steering angle (0.1 deg, same resolution), yaw rate (about 0.01 deg/s) and speed: a chassis-data relay; no steering command.
+- Torque-rise limit question (fingerprint findings): comma's ISO 11270 jerk test sets rates (only +4 would pass with the port's MAX_LAT_ACCEL 2.7); simulated +4/+5/+7 change twitch and weave very little (A0 jumps +2...+7%, lag <= 1 deg better); not a fix. Open: measure this car's MAX_LAT_ACCEL_MEASURED (a guess today; if higher than 2.74, the down-rate 7 would fail).
+- Parameter map (weave-twitch findings §11): every lateral-path parameter with its value and the project's evidence on twitch and weave.
+- Lateral tunables inventory (new findings doc 2026-10-07-g70-lateral-tunables.md): 117 tunables from the model to panda safety, source-verified in part. V0 vs upstream V1 compared from source (V1 selectable via EnforceTorqueControl + TorqueControlTune 1.0; untested on the stick-slip model).
+
+## 2026-10-07: Session 14lv, standalone rlog viewer (`tools/log-viewer/`)
+
+- **User request:** a standalone `.html` page that opens comma rlogs and graphs their data, like openpilot's data viewer. The checkout's viewers are `tools/plotjuggler` (a launcher for the external Qt app) and `tools/jotpluggler` (native C++), so the page reimplements decoding in the browser.
+- **Built** [tools/log-viewer/](tools/log-viewer/README.md): `log-viewer.html` (one file, about 330 KiB, no network), assembled by `build.py` (stdlib) from `src/`.
+  - Inputs: the schema JSON from `export_schema.py` (pycapnp, pinned `log.capnp` @ `89bbe60ab1`), fzstd 0.1.1 (MIT), and the checkout's 17 jotpluggler layouts.
+  - Decoder: schema-driven capnp reader, with a bzip2 decoder and truncation-tolerant zstd.
+  - Series paths, time base and layout JSON follow jotpluggler. Deviations are listed in the README: scalar lists up to 64 entries, payload fields shadowed by the event-level `valid`/`logMonoTime`/`t` renamed.
+  - UI: tree with filter, split panes and tabs with a shared time axis and cursor, lat/long-active timeline, logs, inspector, DBC signals, CSV, light and dark.
+- **Verification** (commands in the tool README; outputs in `E:\DragalPilot\scratch\wsl\rlogviewer\`, screenshots in `analysis/log-viewer/`):
+  - **Decoder vs an independent pycapnp walk:** every series identical (count, times, values) on 5 segments from 5 routes (10/03–10/07). That includes the known-truncated `00000000--eb903c3c31/000`: both stop at the same message, 81,410 events.
+  - **DBC decoding vs opendbc's `get_raw_value`** with `hyundai_can_generated`: 1,465/1,465 signal series identical once the reference also applies DBC multiplexing (opendbc's parser ignores `m<n>`; affects 4 EMS12 signals).
+  - **bzip2:** a real rlog recompressed single- and multi-stream decodes byte-identical; corruption is detected by CRC.
+  - **Headless Chromium smoke test:** 20/20 checks at first build, including all four tested built-in layouts and refusal of code in custom series (31/31 after QA).
+  - **Scale:** a 20-segment route opens in about 27 s, about 1 GB heap (1.4 GB with all services decoded). Cursor move about 2.6 ms per frame; full redraw of 1.1 M points about 42 ms.
+- **Fixed during testing:**
+  - An unapplied extraction refactor.
+  - A false "files overlap" warning: segments repeat route-start messages, so files are now ordered by percentile time.
+  - Float64 storage replaced by exact wire-type typed arrays (modelV2 over 20 segments: +1.1 GB → +0.15 GB).
+  - A custom-series parameter-injection hole.
+- **Tooling** (docs/baseline.md): Node 22.20.0, Playwright + Chrome Headless Shell, apt `libnss3` (WSL).
+- **Not changed:** `sunnypilot/` and the device. SSH: none.
+- **QA round 1 (cooperative, snapshot manifest `analysis/log-viewer/snapshot-r1.sha256`, sha256 `38bced4d…`):**
+  - The reviewer independently re-confirmed the decoder (including 5,995 messages rewritten as far/double-far pointers), bzip2, DBC (fuzz 480×20 vs `get_raw_value`) and the build.
+  - Findings: 2 major, 7 minor confirmed, 5 suspected, 6 doc/parity. All were checked against the code by the coordinator and all were agreed.
+  - **Major, fixed:**
+    - one undecodable message made the whole route's time range NaN and stuck "Load all";
+    - closing the active tab left the next tab's curves undecoded.
+  - **Minor, fixed:**
+    - a filter during decoding threw every frame;
+    - a cut multi-segment header rejected the file;
+    - custom-series Python semantics differed silently (`%`, chained comparisons, tuples, vectorized min/max, log base). Now refused or matched;
+    - layout colours reached CSS unvalidated (`url()` beacon). Now `#rrggbb` only;
+    - the active-pane outline was stale;
+    - phone-width overlay and overflow;
+    - pane titles were not shown.
+  - **Suspected, fixed:**
+    - per-message error containment in extraction, CAN and logs;
+    - a decode race when files are reopened;
+    - logs without `msg`;
+    - the inspector forgot expanded nodes;
+    - `<` is now escaped in inlined JSON.
+  - **Parity and docs:**
+    - layout parsing now matches jotpluggler's `parse_workspace_node` (with `currentTabIndex`);
+    - truncated `.bz2` opens partially;
+    - the export writes `range`;
+    - README deviations added (cursor value hold vs interpolation, step choice, shadowed fields);
+    - drags handle `pointercancel`, CSV skips hidden curves and guards formulas, re-selecting a layout reloads it.
+  - **Found by the coordinator:** struct and list pointers are now bounds-checked when resolved. Before, an out-of-bounds bool read returned 0 silently.
+  - **Regression tests:** new `test/robustness.js` (11/11) and smoke 27/27. The pycapnp and opendbc matches re-run after the fixes, still identical.
+  - Report: `analysis/log-viewer/qa/round1/report.md`.
+- **QA round 2 (independent adversarial):**
+  - Snapshot manifest `analysis/log-viewer/snapshot-r2.sha256` (sha256 `7e1a3f58…`).
+  - Package `scratch/qa-logviewer-r2/package/`: code, tests, reference sources and neutral requirements only; checked to contain no round-1 material.
+  - Isolation is by instruction only (a local subagent can still read other files), so it is not enforced. Disclosed.
+  - The reviewer independently re-confirmed the decoder (14,185 series on segment 002), the codecs, DBC bit extraction (200k random signals vs a port of jotpluggler's decoder), and parity of the built-in custom series with `math_eval.py`.
+  - Findings: 4 major, 9 minor, 7 nits. All were checked by the coordinator against code and source, and all were agreed (no tiebreaker needed).
+  - **Major, fixed:**
+    - a double-far pointer to a missing segment read from byte 0 silently (a NaN offset passed the bounds check);
+    - pointers were bounds-checked against the file, not their own segment, so a pointer into another message decoded silently. Every target and landing pad is now checked per segment;
+    - at phone width the logs/inspector panel was unreachable. The page now scrolls there;
+    - edited code after jotpluggler's sample function was ignored. The generated loop is now accepted only verbatim (all 10 one-line series in the built-in layouts pass).
+  - **Minor, fixed:**
+    - the custom-series translation is replaced by a parser for a Python subset with Python's semantics: `--`, NaN truthiness in and/or, chained comparisons, builtin max/min with NaN, argument counts, names jotpluggler does not define;
+    - tick loops could hang on a value range below float resolution;
+    - the CAN index was synchronous and memory-heavy. It is now built in steps with typed arrays: 20 segments in 1.6 s with the longest frame 92 ms, +0.26 GB instead of 5.6 s blocked and +0.55 GB;
+    - `/can/t` and friends were missing, and CAN curves without a DBC stayed "decoding" forever. They now give data or an explicit error;
+    - malformed layouts broke the page. Fields are now coerced as jotpluggler does;
+    - a corrupt message kept the fields read before the error. It is now dropped from every series; errors appear in Info;
+    - zstd content checksums were not verified. Checksummed frames are now verified with XXH64 (real rlog frames carry none);
+    - DBC: `m<n>M`, mux without a switch, and an unreadable `BO_` line attaching signals to the previous message;
+    - nits: steps now end at the last sample, CAN value-table labels use the physical value, logs are deduplicated as in jotpluggler, the time origin uses known services only, the trailing-bytes warning, and CSV reports omitted curves.
+  - N7 (the package lacked `include/c++.capnp` under the opendbc car folder) affected only the review package.
+  - **Regression tests:** robustness 18/18 (new: double-far/missing segment and cross-message pointer with "message gone everywhere, rest identical"; zstd checksums; DBC edge cases) and smoke 31/31.
+  - The pycapnp (3 segments) and opendbc matches were re-run on the final build and are still identical.
+  - Final snapshot manifest `analysis/log-viewer/snapshot-final.sha256` (sha256 `29fc519e…`). Report: `analysis/log-viewer/qa/round2/report.txt`.
+- **QA status:** full two-round QA complete, with the round-2 isolation caveat. Not tested: Firefox, Safari, real phones, logs from other software versions.
+- **Final scale figures:** a 20-segment route opens in about 30 s with about 1 GB of heap; everything decoded, including CAN, takes about 1.55 GB.
+- Stick-slip under the car's own LKA (weave-twitch findings §12): about 6 min of logged driving was steered by the stock system (panda pass-through, EPS active). Hold-and-jump also present (highway 40 jumps/min, hold 41%, single 24 s run; openpilot 36 / 51%). Supports a hardware origin; small, uncontrolled sample.
+- User challenge on the twitch metric (weave-twitch findings §12.1): §12 withdrawn. Our LKAS11 has no frame drops (100 Hz) and EPS dropouts are rare (0.012%) and unrelated to jumps. A hold-step metric also fires as often in manual (31-35/min) and stock (18-20) driving as under openpilot (20-27). The log twitch metrics are not validated against the complaint; twitch conclusions from sessions 10-13ws are provisional.
+- Handoff [s13ws2 comfort metrics](docs/sessions/2026-10-07-s13ws2-comfort-metrics-handoff.md) and [kickoff](docs/sessions/2026-10-07-s13ws2-comfort-metrics-kickoff.md): next session builds and validates comfort and twitch measures (torque-based stick-slip detector, steering-caused yaw and lateral jerk, same-road comparisons, the user's labels) before any fix work; the model-in-loop kickoff is superseded until then. User: comfort is the goal.
+- *(Note, session 15cm: the five 13ws bullets above, from "Stick-slip under the car's own LKA" onward, belong to session 13ws; they were appended after the 14lv section was inserted. Left in place while 14lv is active.)*
+
+## 2026-10-07/08: Session 15cm, comfort and twitch measures (offline)
+
+- **Session start** (~22:24 EDT) from the [comfort-metrics kickoff](docs/sessions/2026-10-07-s13ws2-comfort-metrics-kickoff.md):
+  - outer `main` @ `606c36b` + uncommitted docs;
+  - `dragal/custom` @ `89bbe60ab1`, clean; WSL clone @ `89bbe60ab1`, clean;
+  - `E:` UniqueId matches, write OK, 226.7 GB free.
+  - **A parallel session (14lv, log viewer) is running.** It works in `tools/log-viewer/` and `scratch/wsl/rlogviewer`; no overlap.
+  - No device access, no SSH, no `sunnypilot/` or WSL-clone change.
+  - New findings doc: [comfort metrics](docs/findings/2026-10-07-g70-comfort-metrics.md).
+- **One-pass extraction** of all 500 segments (`scratch/wsl/cm/cm_extract.py`; 100 Hz grid with raw LKAS11 ours/stock, MDPS12, ESP12, ADRV_0x51, IMU, GPS, lanes, parameters, bookmarks). The time base is the `drive_extract.py` convention (`cm_t0.py`); the bookmarks match session 10.
+- **Input facts:**
+  - **ESP12 (0x220) carries the car's yaw rate and lateral acceleration.** The yaw rate matches the gyro (r ≈ −0.9995, scale 1.00–1.01). ADRV_0x51 relays it 30 ms later. This **corrects 13ws** ("ADRV_0x51 the only yaw source"); a note is added to the fingerprint findings.
+  - Column torque: 0.00781 Nm per raw unit.
+  - New bookmarks: `0x1a` 92.5 s (the grasp warning) and **`0x28` 238 s (D2C4 drive, unexplained)**.
+  - **The stock-LKA steering is route `0x0e`:** dashcam mode (`OpenpilotEnabledToggle = 0`), 6.2 min. It is the session 4b low-speed loop, the same road and day as the comma laps `0x0a`/`0x0b` and the manual lap `0x0c`.
+- **Amendment 13 pre-registered** (~22:45 EDT, before any comparison):
+  - weave measures W_ar (yaw-derived lateral acceleration 0.2–0.7 Hz), W_lane, W_ang;
+  - twitch and comfort measures J_r (0.7–4 Hz yaw-derived jerk), J_coh, A_wd, T, E_step, E_hs, the new torque-based S_act / S_drv, and Δa_step / U;
+  - the validation rules V-label (the user's bookmarked and filmed moments) and V-stock (comma vs stock on the same road);
+  - then the D2C4 re-score, the bicycle check, and a candidate re-rank only if both pass.
+- **Results** (findings §4; focused review done):
+  - **A comma wheel step causes about 0.15 m/s² of lateral acceleration** within 0.45 s (z 27–44).
+  - **V-label is not evaluable as pre-registered:** the `0x22` 629.7 s bookmark was in manual driving. With a post-hoc four-episode adaptation, J_r and A_wd pass, and the wheel-angle and torque-based step measures fail.
+  - **V-stock** (same road, day, driver; equally light hands):
+    - the comma's **felt weave W_ar is 1.88× [1.58, 2.30] the stock LKA's** (manual 1.02×);
+    - the twitch-band jerk J_r is 1.05× (not separated), and the steering-coherent part 1.12× (exploratory, not separated);
+    - wheel hold-steps 1.28×.
+  - **Verdicts:**
+    - no twitch measure is validated strictly;
+    - A_wd valid and J_r partly supported, only with the adaptation;
+    - T / E_step / E_hs / S_act / U not valid;
+    - W_ar is the weave comfort measure (ρ 0.71 with the lane offset).
+  - **The bicycle model does not reproduce** the measured yaw under the comma (gain 1.35 / 1.96, phase +29 / +37° at 0.2–0.7 / 0.7–1.5 Hz), so no candidate is re-ranked.
+    - The review (F1, reproduced) showed the mismatch depends on who steers: the model fits manual driving at medium speed, and under actuator control the yaw leads the wheel angle.
+    - So the wheel angle is not a faithful input under the comma.
+  - **Exploratory:** under the comma and the stock LKA, the car's yaw starts rising during the 0.3 s hold before a wheel step, and the column torque winds the other way. In manual driving it does not. Hypothesis: the steering wheel catches up with a rack that is already moving.
+  - **D2C4 on the car** (B vs A on B's road): **felt weave W_ar +29% [+12, +49]**, lane +49%; felt twitch-band jerk J_r −4% [−17, +9]; only the wheel-step counts fall (−21…−26%).
+- **Reading for the user** (findings §5):
+  - the weave is the clearest comma–stock difference;
+  - the fast, steering-caused motion is about the same;
+  - hypothesis: the visible twitch follows the weave;
+  - D2C4 worsens the felt weave without a felt twitch benefit.
+  - **Options:** a decisive same-road highway stock vs comma recording with wheel video and labels (needs consent); more labels; keep or roll back D2C4; next work on the weave.
+- **QA:** self-tests pass. **Focused adversarial review done** (one independent agent; findings §6).
+  - No blocker.
+  - **Major findings:**
+    - F1: bicycle mismatch source-dependent (reading revised);
+    - F2: V-label not evaluable (already reported);
+    - S1: the 13ws FFT band-pass inflated the "angle 0.7–4 Hz RMS" ×1.15–2.53 (most for manual). Erratum in the weave-twitch findings §12; counts unaffected.
+  - The coordinator verified F1, F2, S1 and F10 (`cm_verify_review.py`).
+  - Minor findings are noted (findings §6).
+  - Still unreviewed: `s13ws_model/*` and the twin code (not used for results).
+- **Exploratory, what the EPS receives** (findings §4.10):
+  - the comma's torque command is a staircase (flat 50% of 10 ms steps, 19% exactly +3), where the stock's changes almost every step by 1–2 counts;
+  - the comma has a third more 0.2–0.7 Hz torque;
+  - the LKAS11 icon/status fields differ (effect on the EPS untested).
+- **Data:** extraction outputs and evaluations in `analysis/g70-comfort-metrics-20261007/`; scripts in `scratch/wsl/cm/`; logs `logs/s15cm-*`. Deleted: `temporary/cm_test/` (a one-segment extraction test).
+
+## 2026-10-08: Handoff to Mayday
+
+- The project is handed over to a new developer, Mayday.
+- The previous maintainer rescinded their process rules. `CLAUDE.md` is cut down to environment facts, device facts and standing authorizations:
+  - tool installs on the VM and WSL;
+  - deleting files that are no longer needed;
+  - read-only device pulls.
+- `docs/local-storage.md` and the other docs are kept, since they describe the environment.
+- Committed the outstanding work from sessions 8–15: findings, proposals, session handoffs and kickoffs, and `tools/log-viewer/`.

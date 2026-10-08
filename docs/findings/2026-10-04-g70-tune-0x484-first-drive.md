@@ -89,6 +89,7 @@ Software: `dragal/custom` @ `82f58a9a8c`, panda firmware `206ea19c…` (initData
 ## Next
 
 1. ~~Dashboard warning~~ **Confirmed by the user (2026-10-04): no "grasp not detected" warning appeared on this drive.** The 0x484 change works as intended on this car (user observation; one drive).
+   - **Update (session 8, 2026-10-05):** this conclusion is weaker than stated. On routes 8/9 the camera's `LFA_SysWarning` was only 3 (`lfa_error` per `hyundai_can.dbc` L1695), never 5/6 (keep hands on wheel). So the drive never contained a hands-off escalation to suppress. The first 5/6 episode with the change active (route `1a`, 2026-10-05 06:43:20) coincides with a reported "grasp not detected". See [2026-10-05-g70-device-errors.md](2026-10-05-g70-device-errors.md) §4.
 2. More driving lets `torqued` reach valid with ~4.2. Then re-measure.
 3. Investigate the slow lane-position wander (path/planner level) as a separate question.
 4. Next round (user decision): replace the 0x484 `check_relay` entry with a Hyundai forwarding rule; watch the bus-1 startup fault.

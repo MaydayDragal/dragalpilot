@@ -12,6 +12,7 @@ Independent sunnypilot customization project: source investigation, local log an
 | [docs/local-storage.md](docs/local-storage.md) | Data root (`E:\DragalPilot`), layout, recording rules |
 | [docs/sessions/](docs/sessions/README.md) | Handoff and kickoff documents between sessions |
 | [docs/kickoff/Startup.md](docs/kickoff/Startup.md) | Original project kickoff prompt (verbatim) |
+| [tools/log-viewer/](tools/log-viewer/README.md) | Standalone HTML rlog viewer: open `log-viewer.html`, drop rlogs, plot any field (jotpluggler-compatible paths and layouts) |
 | `sunnypilot/` | Clone of https://github.com/sunnypilot/sunnypilot.git (`dev`). **Gitignored** by this repo, with its own `.git`. Not vendored and not a submodule. |
 
 Logs, videos, datasets, analysis outputs and caches are **never** stored in this repo. They live under `E:\DragalPilot`.

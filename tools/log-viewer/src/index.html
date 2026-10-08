@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Log Viewer</title>
+<meta name="description" content="Standalone viewer for openpilot / sunnypilot rlog files: open rlogs and plot any field.">
+<style>
+/*@@CSS@@*/
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div class="brand" title="openpilot rlog viewer">Log&nbsp;Viewer</div>
+    <div class="group">
+      <button id="btn-open" class="btn primary" title="Open rlog files (rlog, rlog.zst, rlog.bz2); replaces what is loaded">Open files</button>
+      <button id="btn-folder" class="btn" title="Open a route folder: picks every file named rlog* below it">Open folder</button>
+      <button id="btn-add" class="btn" title="Add more segments to what is loaded">Add</button>
+    </div>
+    <div class="group">
+      <label class="field-label" for="layout-select">Layout</label>
+      <select id="layout-select" class="select" title="Built-in layouts come from openpilot tools/jotpluggler/layouts"></select>
+      <button id="btn-import" class="btn" title="Import a jotpluggler layout (.json)">Import</button>
+      <button id="btn-export" class="btn" title="Export the current layout as jotpluggler JSON">Export</button>
+      <button id="btn-csv" class="btn" title="Export the curves of this tab in the visible time range as CSV">CSV</button>
+    </div>
+    <div class="group">
+      <button id="btn-dbc" class="btn" title="Load a DBC file to decode can / sendcan signals">Load DBC</button>
+    </div>
+    <span class="grow"></span>
+    <span id="status" class="status" aria-live="polite"></span>
+    <button id="btn-info" class="btn ghost" title="Route, software and file details">Info</button>
+    <button id="btn-theme" class="btn ghost icon" title="Theme: auto / light / dark" aria-label="Theme">
+      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg>
+    </button>
+    <button id="btn-help" class="btn ghost icon" title="Help and shortcuts" aria-label="Help">?</button>
+  </header>
+
+  <div class="main">
+    <aside id="sidebar" class="sidebar">
+      <div class="search">
+        <input id="search" type="search" placeholder="Filter series, e.g. carState steer" autocomplete="off" spellcheck="false">
+      </div>
+      <div id="tree" class="tree" tabindex="0"><div class="tree-spacer"></div><div class="tree-rows"></div></div>
+      <div class="sidebar-foot">
+        <button id="btn-loadall" class="btn small" title="Decode every service so the filter searches all fields">Load all services</button>
+        <span id="tree-hint" class="muted small"></span>
+      </div>
+    </aside>
+    <div id="sidebar-resizer" class="vresizer" title="Drag to resize"></div>
+
+    <section class="center">
+      <div id="tabs" class="tabs"></div>
+      <div id="workspace" class="workspace"></div>
+      <div class="timeline-wrap">
+        <div class="timeline-legend">
+          <span class="key"><i class="swatch lat"></i>lateral active</span>
+          <span class="key"><i class="swatch long"></i>longitudinal active</span>
+          <label class="key"><input type="checkbox" id="chk-shade" checked> shade plots</label>
+          <span class="grow"></span>
+          <span id="cursor-readout" class="mono muted"></span>
+        </div>
+        <div id="timeline" class="timeline"><canvas></canvas></div>
+      </div>
+      <div id="bottom" class="bottom collapsed">
+        <div id="bottom-resizer" class="hresizer"></div>
+        <div class="bottom-head">
+          <button class="tab-btn" data-panel="logs">Logs</button>
+          <button class="tab-btn" data-panel="inspector">Inspector</button>
+          <span class="grow"></span>
+          <span class="panel-controls" data-for="logs">
+            <input id="log-filter" type="search" placeholder="Filter logs" spellcheck="false">
+            <label><input type="checkbox" id="log-follow" checked> follow cursor</label>
+          </span>
+          <span class="panel-controls" data-for="inspector">
+            <select id="inspect-service" class="select"></select>
+            <span id="inspect-meta" class="mono muted small"></span>
+          </span>
+          <button id="btn-bottom-toggle" class="btn ghost small" title="Show / hide panel">Show</button>
+        </div>
+        <div class="bottom-body">
+          <div id="panel-logs" class="panel"><div id="log-list" class="log-list"><div class="log-spacer"></div><div class="log-rows"></div></div></div>
+          <div id="panel-inspector" class="panel"><div id="inspector" class="inspector mono"></div></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="empty" class="empty">
+    <div class="empty-card">
+      <h1>Open an rlog to start</h1>
+      <p>Drop <code>rlog</code>, <code>rlog.zst</code> or <code>rlog.bz2</code> files anywhere on this page, or use <b>Open files</b> / <b>Open folder</b>. Select several segments to view them as one timeline.</p>
+      <p class="muted">Everything is decoded locally in this browser tab; nothing is uploaded.</p>
+      <p class="muted small" id="build-meta"></p>
+    </div>
+  </div>
+  <div id="dropzone" class="dropzone hidden"><div>Drop rlogs to open<br><span class="small muted">hold Shift to add to what is loaded · .dbc and layout .json files work too</span></div></div>
+  <div id="progress" class="overlay hidden"><div class="progress-card"><div id="progress-text">Loading…</div><div class="bar"><i id="progress-bar"></i></div></div></div>
+  <div id="toast" class="toast hidden"></div>
+
+  <dialog id="dlg-info" class="dialog"><form method="dialog"><h2>Route info</h2><div id="info-body" class="info-body"></div><div class="dialog-actions"><button class="btn">Close</button></div></form></dialog>
+  <dialog id="dlg-help" class="dialog"><form method="dialog"><h2>How to use</h2>
+    <div class="help">
+      <h3>Series</h3>
+      <ul>
+        <li>Expand a service in the left tree to decode it, then click a field to add it to the active plot (outlined), or drag it onto any plot.</li>
+        <li>The filter matches all words, e.g. <code>carstate steer</code>. Use <b>Load all services</b> to search every field.</li>
+        <li>Paths follow openpilot's jotpluggler: <code>/carState/vEgo</code>, <code>/modelV2/laneLines/0/y/0</code>. Scalar lists longer than 64 are not split into series. Each service also gets <code>/valid</code>, <code>/logMonoTime</code> and <code>/t</code>.</li>
+        <li>CAN: expand <code>can</code> / <code>sendcan</code> for raw bytes per bus and address; load a DBC to get signals as <code>/can/&lt;bus&gt;/&lt;Message&gt;/&lt;Signal&gt;</code>.</li>
+      </ul>
+      <h3>Plots</h3>
+      <ul>
+        <li>Drag to pan · wheel to zoom time · Shift+drag to zoom to a time range · Ctrl+wheel to zoom the value axis · double-click to show the whole data range.</li>
+        <li>The cursor follows the mouse and is shared by all plots, the tree values, the logs and the inspector.</li>
+        <li>Legend: click a name to hide it, × to remove it. Pane buttons split the pane down or right, or close it.</li>
+        <li>Keys: ← → pan, + − zoom, Home whole data range, Esc release the value-axis zoom of the active plot.</li>
+      </ul>
+      <h3>Time</h3>
+      <p>Seconds since the earliest <code>logMonoTime</code> of the loaded files (as in jotpluggler). Segments repeat a few messages stamped at the route start, so a later segment starts well after 0; the initial view and double-click show the range where the data is. Values at the cursor are the latest sample at or before it (jotpluggler interpolates between samples).</p>
+      <h3>Layouts</h3>
+      <p>Built-in layouts are openpilot's jotpluggler layouts; import and export use the same JSON format. Custom Python series are evaluated with Python's meaning when they are a one-line <code>return</code> expression (see the README for the supported subset); anything else is shown as unsupported, never approximated. Camera and map panes are not supported.</p>
+    </div>
+    <div class="dialog-actions"><button class="btn">Close</button></div></form></dialog>
+
+  <input type="file" id="file-input" multiple hidden>
+  <input type="file" id="add-input" multiple hidden>
+  <input type="file" id="folder-input" webkitdirectory multiple hidden>
+  <input type="file" id="layout-input" accept=".json,application/json" hidden>
+  <input type="file" id="dbc-input" accept=".dbc" multiple hidden>
+</div>
+<script type="application/json" id="schema-json">@@SCHEMA@@</script>
+<script type="application/json" id="layouts-json">@@LAYOUTS@@</script>
+<script type="application/json" id="build-json">@@BUILD@@</script>
+<script>
+/*@@JS@@*/
+</script>
+</body>
+</html>

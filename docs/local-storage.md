@@ -41,6 +41,9 @@ E:\DragalPilot\
   temporary/      partial transfers, staging before verification
   deploy/         deployment artifacts (bundles, dry-run logs, device pre/post-state) per deployment
   logs/           tool/transfer/clone logs (added at setup: keeps command logs out of the repo and out of the recordings tree)
+  device-logs/    non-route device data pulled read-only (swaglogs, boot/crash logs, params, /var/log, command output), one
+                  folder per pull: YYYY-MM-DD_<session>_<tag>/ with the device paths kept, plus the manifest and verify files.
+                  May contain secrets (tokens in params): never copy into the repo or docs. Added 2026-10-05.
 ```
 
 `logs/`, `deploy/` and `recordings/undated/` depart from the kickoff layout. The reasons are given beside them above.
@@ -62,6 +65,7 @@ E:\DragalPilot\
   - The mapping from camera to filename (e.g. which file is the narrow road, wide road, and driver camera) **must be verified against the pinned sunnypilot source before first use**, and the result recorded here. Status: **verified 2026-10-04** against `openpilot/system/loggerd/loggerd.h` L98–160 @ `7e9d0755d9`: `fcamera.hevc` → `videos/front-narrow/`, `ecamera.hevc` → `videos/front-wide/`, `dcamera.hevc` → `videos/driver/` (recorded only when `RecordFront=1`). `qcamera.ts` is a low-res copy of the narrow road view and is not pulled.
 - **Provenance:** for each recording, `metadata/` holds the source (device or connect), transfer method, date, file sizes, hashes where available, and a list of missing segments and cameras. Missing data is recorded as missing, never assumed complete.
 - **Transfers** land in `temporary/` first. Each file is checked for completeness (size and hash where possible) before it is promoted into `recordings/`. Existing recordings are never overwritten blindly, and raw data is not duplicated without reason.
+- **Cleanup** (user rule, 2026-10-05; CLAUDE.md §3): files that are no longer useful may be deleted without asking, e.g. a staging `pull.tar` and staged copies once the promoted files are hash-verified, or superseded scratch/temp files. Small manifests and logs (`pull.log`, `remote.sha256`, `local-verify.txt`) are kept as provenance. Promoted recordings and the only copy of anything are never deleted this way. Data-file deletions are noted in the changelog.
 
 ## Tool configuration
 
