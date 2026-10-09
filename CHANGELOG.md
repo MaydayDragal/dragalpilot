@@ -1022,3 +1022,7 @@ One dated entry per session, including research-only sessions. Times are America
     - every guard passed, then reboot.
   - **Connection 2** (read-only, 19:49Z, log `logs/device-g70-baseline-postboot-20261009.log`): `g70-baseline` @ `c027a92857`, clean, offroad, `DisableUpdates=1`, firmware unchanged, all four params absent, D2C4 code absent, audio gate present.
   - **Effect:** the camera calibration and all learned values start from scratch. The device needs a calibration drive before it will engage. torqued uses the port tune until it becomes valid again.
+- **sunnypilot work stored in this repo** (user request; private, no separate repo):
+  - branches `sunnypilot/g70-baseline` (`c027a92857`) and `sunnypilot/dragal-custom` (`89bbe60ab1`), plus tag `sunnypilot-baseline/dev-20261003` (`0b2c431d`), pushed from `sunnypilot/` through a new remote `dragal`;
+  - readable patches in `sunnypilot-patches/` on `main`;
+  - the local `sunnypilot/` checkout is now on `g70-baseline`.

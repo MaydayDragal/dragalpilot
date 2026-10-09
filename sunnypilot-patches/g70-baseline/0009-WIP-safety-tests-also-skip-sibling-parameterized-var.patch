@@ -1,0 +1,28 @@
+From c1806292fafb491e5fdf6707b37de498e291ae61 Mon Sep 17 00:00:00 2001
+From: Dre Gilley <dre@dregilley.com>
+Date: Sun, 4 Oct 2026 11:09:40 -0400
+Subject: [PATCH 09/12] WIP: safety tests: also skip sibling parameterized
+ variants of the same class
+
+---
+ opendbc_repo/opendbc/safety/tests/common.py | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/opendbc_repo/opendbc/safety/tests/common.py b/opendbc_repo/opendbc/safety/tests/common.py
+index fb09a32970..bf2b0d0414 100644
+--- a/opendbc_repo/opendbc/safety/tests/common.py
++++ b/opendbc_repo/opendbc/safety/tests/common.py
+@@ -998,8 +998,8 @@ class SafetyTest(SafetyTestBase):
+         if isinstance(tc, type) and issubclass(tc, SafetyTest) and attr != current_test:
+           tx = tc.TX_MSGS
+           if tx is not None and not attr.endswith('Base'):
+-            # parameterized variants (<Class>_<n>) run the same safety mode as their base class
+-            if re.fullmatch(rf"{attr}_\d+", current_test):
++            # parameterized variants (<Class>_<n>) run the same safety mode as their base class and each other
++            if re.sub(r"_\d+$", "", attr) == re.sub(r"_\d+$", "", current_test):
+               continue
+             # No point in comparing different Tesla safety modes
+             if 'Tesla' in attr and 'Tesla' in current_test:
+-- 
+2.56.0.windows.1
+

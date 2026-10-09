@@ -1,0 +1,205 @@
+From 268040c36103066f44214e4909c00f8951dc17d9 Mon Sep 17 00:00:00 2001
+From: Dre Gilley <dre@dregilley.com>
+Date: Wed, 7 Oct 2026 12:45:31 -0400
+Subject: [PATCH 13/16] WIP: G70 2024 steering twitch: friction deadzone 0.4
+ deg + 2 Hz desired-curvature low-pass
+
+On straight highway the wheel holds ~0.4 deg short of the target, then jumps
+0.3-0.6 deg every 1.5-2 s. Logs show steering static friction (EPS output
+follows the command during holds); a stick-slip closed-loop model fitted on
+the logs traces the hunting to the friction term ramping on errors inside the
+stiction band, re-triggered by small fast jitter in the requested curvature.
+
+- hyundai/interface.py: steeringAngleDeadzoneDeg 0.4 for GENESIS_G70_2024 only
+  (existing configure_torque_tune argument; friction term only)
+- latcontrol_torque_v0.py: car-scoped first-order low-pass (2 Hz) of
+  desired_curvature, updated every cycle, initialized to the first value
+
+Offline (model): jumps -45...-60%, fast wheel motion -33...-42%, weave not up;
+mean tracking error ~+20%, curve-transient lag +0.09 s. Not validated on-car.
+
+Tests: car scoping, filter response, continuity across engagement, deadzone.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ opendbc_repo/opendbc/car/hyundai/interface.py |   9 +-
+ .../controls/lib/latcontrol_torque_v0.py      |  13 +++
+ .../tests/test_latcontrol_torque_v0_g70.py    | 101 ++++++++++++++++++
+ 3 files changed, 122 insertions(+), 1 deletion(-)
+ create mode 100644 openpilot/sunnypilot/selfdrive/controls/lib/tests/test_latcontrol_torque_v0_g70.py
+
+diff --git a/opendbc_repo/opendbc/car/hyundai/interface.py b/opendbc_repo/opendbc/car/hyundai/interface.py
+index 9b21288292..2b4f6f63d4 100644
+--- a/opendbc_repo/opendbc/car/hyundai/interface.py
++++ b/opendbc_repo/opendbc/car/hyundai/interface.py
+@@ -18,6 +18,12 @@ Ecu = structs.CarParams.Ecu
+ # Cancel button can sometimes be ACC pause/resume button, main button can also enable on some cars
+ ENABLE_BUTTONS = (ButtonType.accelCruise, ButtonType.decelCruise, ButtonType.cancel, ButtonType.mainCruise)
+ 
++# Friction-compensation deadzone in steering-wheel degrees (lateralTuning.torque.steeringAngleDeadzoneDeg). The torque
++# controller ignores lateral-accel errors smaller than this angle's equivalent when computing the friction term only.
++# GENESIS_G70_2024: the steering holds about 0.4 deg short of the target before breaking free (static friction); without a
++# deadzone the friction term keeps ramping inside that band and the wheel moves in small hold-and-jump steps.
++STEERING_ANGLE_DEADZONE_DEG = {CAR.GENESIS_G70_2024: 0.4}
++
+ 
+ class CarInterface(CarInterfaceBase):
+   CarState = CarState
+@@ -117,7 +123,8 @@ class CarInterface(CarInterfaceBase):
+     ret.centerToFront = ret.wheelbase * 0.4
+     ret.steerActuatorDelay = 0.1
+     ret.steerLimitTimer = 0.4
+-    CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
++    CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning,
++                                           steering_angle_deadzone_deg=STEERING_ANGLE_DEADZONE_DEG.get(candidate, 0.0))
+ 
+     if ret.flags & HyundaiFlags.ALT_LIMITS:
+       ret.safetyConfigs[-1].safetyParam |= HyundaiSafetyFlags.ALT_LIMITS.value
+diff --git a/openpilot/sunnypilot/selfdrive/controls/lib/latcontrol_torque_v0.py b/openpilot/sunnypilot/selfdrive/controls/lib/latcontrol_torque_v0.py
+index b6ee7baabe..d52598eccf 100644
+--- a/openpilot/sunnypilot/selfdrive/controls/lib/latcontrol_torque_v0.py
++++ b/openpilot/sunnypilot/selfdrive/controls/lib/latcontrol_torque_v0.py
+@@ -33,6 +33,12 @@ LAT_ACCEL_REQUEST_BUFFER_SECONDS = 1.0
+ FRICTION_THRESHOLD = 0.3
+ VERSION = 0
+ 
++# Car-scoped first-order low-pass of the desired curvature (cutoff in Hz), applied every cycle (also while inactive, so it
++# tracks the request and adds no step at engagement). GENESIS_G70_2024: small fast jitter in the requested curvature keeps
++# re-triggering a hold-and-jump steering motion (static friction + friction term); 2 Hz removes most of it and adds
++# about 80 ms of lag to the request.
++DESIRED_CURVATURE_LP_HZ = {"GENESIS_G70_2024": 2.0}
++
+ 
+ class LatControlTorque(LatControl):
+   def __init__(self, CP, CP_SP, CI, dt):
+@@ -47,6 +53,10 @@ class LatControlTorque(LatControl):
+     self.lat_accel_request_buffer = deque([0.] * self.lat_accel_request_buffer_len , maxlen=self.lat_accel_request_buffer_len)
+     self.previous_measurement = 0.0
+     self.measurement_rate_filter = FirstOrderFilter(0.0, 1 / (2 * np.pi * LP_FILTER_CUTOFF_HZ), self.dt)
++    curvature_lp_hz = DESIRED_CURVATURE_LP_HZ.get(CP.carFingerprint)
++    self.desired_curvature_filter = None
++    if curvature_lp_hz is not None:
++      self.desired_curvature_filter = FirstOrderFilter(0.0, 1 / (2 * np.pi * curvature_lp_hz), self.dt, initialized=False)
+ 
+     self.extension = LatControlTorqueExt(self, CP, CP_SP, CI)
+ 
+@@ -65,6 +75,9 @@ class LatControlTorque(LatControl):
+     if self.extension.update_override_torque_params(self.torque_params):
+       self.update_limits()
+ 
++    if self.desired_curvature_filter is not None:
++      desired_curvature = self.desired_curvature_filter.update(desired_curvature)
++
+     pid_log = log.ControlsState.LateralTorqueState.new_message()
+     pid_log.version = VERSION
+     if not active:
+diff --git a/openpilot/sunnypilot/selfdrive/controls/lib/tests/test_latcontrol_torque_v0_g70.py b/openpilot/sunnypilot/selfdrive/controls/lib/tests/test_latcontrol_torque_v0_g70.py
+new file mode 100644
+index 0000000000..1d4d2b84f5
+--- /dev/null
++++ b/openpilot/sunnypilot/selfdrive/controls/lib/tests/test_latcontrol_torque_v0_g70.py
+@@ -0,0 +1,101 @@
++import math
++
++import numpy as np
++
++from openpilot.cereal import log
++from opendbc.car.structs import car
++from opendbc.car.car_helpers import interfaces
++from opendbc.car.hyundai.values import CAR as HYUNDAI
++from opendbc.car.vehicle_model import VehicleModel
++from openpilot.common.realtime import DT_CTRL
++from openpilot.common.test import OpenpilotTestCase
++from openpilot.selfdrive.car.helpers import convert_to_capnp
++from openpilot.sunnypilot.selfdrive.car import interfaces as sunnypilot_interfaces
++from openpilot.sunnypilot.selfdrive.controls.lib.latcontrol_torque_v0 import LatControlTorque as LatControlTorqueV0
++
++G70 = HYUNDAI.GENESIS_G70_2024
++OTHERS = (HYUNDAI.GENESIS_G70, HYUNDAI.HYUNDAI_SONATA, HYUNDAI.HYUNDAI_IONIQ_5)
++V = 30.0
++LAT_DELAY = 0.2
++
++
++def make(car_name, deadzone_deg=None):
++  CarInterface = interfaces[car_name]
++  CP = CarInterface.get_non_essential_params(car_name)
++  if deadzone_deg is not None:
++    CP.lateralTuning.torque.steeringAngleDeadzoneDeg = deadzone_deg
++  CP_SP = CarInterface.get_non_essential_params_sp(CP, car_name)
++  CI = CarInterface(CP, CP_SP)
++  sunnypilot_interfaces.setup_interfaces(CI)
++  CP_SP = convert_to_capnp(CP_SP)
++  return LatControlTorqueV0(CP.as_reader(), CP_SP.as_reader(), CI, DT_CTRL), VehicleModel(CP), CP
++
++
++def car_state(angle_deg=0.0, v=V):
++  CS = car.CarState.new_message()
++  CS.vEgo = v
++  CS.steeringAngleDeg = angle_deg
++  CS.steeringPressed = False
++  return CS
++
++
++def step(controller, VM, active, curvature, angle_deg=0.0, v=V):
++  params = log.VehicleParameters.new_message()
++  return controller.update(active, car_state(angle_deg, v), VM, params, False, curvature, None, False, LAT_DELAY)[2]
++
++
++class TestLatControlTorqueV0G70(OpenpilotTestCase):
++  def test_deadzone_only_for_g70_2024(self):
++    _, _, CP = make(G70)
++    self.assertEqual(CP.lateralTuning.torque.steeringAngleDeadzoneDeg, 0.4)
++    for car_name in OTHERS:
++      _, _, CP = make(car_name)
++      self.assertEqual(CP.lateralTuning.torque.steeringAngleDeadzoneDeg, 0.0, car_name)
++
++  def test_other_cars_request_unfiltered(self):
++    # without the low-pass, V0's setpoint equals the current request (lat_delay * jerk + expected == fut)
++    for car_name in OTHERS:
++      controller, VM, _ = make(car_name)
++      step(controller, VM, True, 0.0)
++      lac_log = step(controller, VM, True, 0.001)
++      self.assertAlmostEqual(lac_log.desiredLateralAccel, 0.001 * V ** 2, places=9, msg=car_name)
++
++  def test_g70_request_first_order_lowpass(self):
++    controller, VM, _ = make(G70)
++    alpha = DT_CTRL / (1 / (2 * math.pi * 2.0) + DT_CTRL)
++    c0, c1 = 0.0005, 0.0015
++    lac_log = step(controller, VM, True, c0)  # first value initializes the filter: no ramp from 0
++    self.assertAlmostEqual(lac_log.desiredLateralAccel, c0 * V ** 2, places=9)
++    for n in range(1, 101):
++      lac_log = step(controller, VM, True, c1)
++      expected = c1 + (c0 - c1) * (1 - alpha) ** n
++      self.assertAlmostEqual(lac_log.desiredLateralAccel, expected * V ** 2, places=7, msg=f"cycle {n}")
++    # 2 Hz first order: about 63% of a step after one time constant (80 ms), > 99% after 0.4 s
++    self.assertGreater(lac_log.desiredLateralAccel, 0.999 * c1 * V ** 2)
++
++  def test_g70_filter_tracks_while_inactive(self):
++    controller, VM, _ = make(G70)
++    for _ in range(100):
++      step(controller, VM, False, 0.0)
++    for _ in range(300):
++      lac_log = step(controller, VM, False, 0.001)
++    self.assertFalse(lac_log.active)
++    lac_log = step(controller, VM, True, 0.001)  # engagement: no step from a stale filter state
++    self.assertAlmostEqual(lac_log.desiredLateralAccel, 0.001 * V ** 2, places=6)
++
++  def test_g70_friction_deadzone(self):
++    # zero request and roll: feedforward f is the friction term alone. 0.4 deg of steering at 30 m/s maps to a lateral-accel
++    # deadzone; errors inside it give no friction torque, errors outside it do.
++    dz_angle = 0.4
++    for angle, inside in ((0.5 * dz_angle, True), (-0.5 * dz_angle, True), (2.0 * dz_angle, False), (-2.0 * dz_angle, False)):
++      g70, VM, _ = make(G70)
++      ref, VM_ref, _ = make(G70, deadzone_deg=0.0)
++      lac_log = step(g70, VM, True, 0.0, angle)
++      lac_ref = step(ref, VM_ref, True, 0.0, angle)
++      self.assertAlmostEqual(lac_log.error, lac_ref.error, places=12)
++      self.assertNotEqual(lac_ref.f, 0.0)
++      if inside:
++        self.assertEqual(lac_log.f, 0.0, f"angle {angle}")
++      else:
++        self.assertEqual(lac_log.f, lac_ref.f, f"angle {angle}")
++        self.assertEqual(np.sign(lac_log.f), np.sign(lac_log.error))
+-- 
+2.56.0.windows.1
+

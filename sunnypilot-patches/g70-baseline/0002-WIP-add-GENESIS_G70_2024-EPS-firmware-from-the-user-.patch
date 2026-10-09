@@ -1,0 +1,30 @@
+From 5cdfe3c082180b3c7e2b1298f0a8517d1d8e435f Mon Sep 17 00:00:00 2001
+From: Dre Gilley <dre@dregilley.com>
+Date: Sat, 3 Oct 2026 23:16:39 -0400
+Subject: [PATCH 02/12] WIP: add GENESIS_G70_2024 EPS firmware from the user's
+ car
+
+test_platform_code_ecus_available requires an EPS entry for non-CAN-FD
+Hyundai platforms. The string is the UDS 0xF100 response from 0x7d4
+captured on the device on 2026-10-03 (buses 0 and 1, identical).
+---
+ opendbc_repo/opendbc/car/hyundai/fingerprints.py | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/opendbc_repo/opendbc/car/hyundai/fingerprints.py b/opendbc_repo/opendbc/car/hyundai/fingerprints.py
+index 30768390f2..84143f92c9 100644
+--- a/opendbc_repo/opendbc/car/hyundai/fingerprints.py
++++ b/opendbc_repo/opendbc/car/hyundai/fingerprints.py
+@@ -1307,6 +1307,9 @@ FW_VERSIONS = {
+     (Ecu.fwdRadar, 0x7d0, None): [
+       b'\xf1\x00IKPE RDR -----      1.00 1.00 99110-G9600         ',
+     ],
++    (Ecu.eps, 0x7d4, None): [
++      b'\xf1\x00IK2 MDPS R 1.00 1.03 57700G9570  4IK4R103',
++    ],
+   },
+ }
+ 
+-- 
+2.56.0.windows.1
+

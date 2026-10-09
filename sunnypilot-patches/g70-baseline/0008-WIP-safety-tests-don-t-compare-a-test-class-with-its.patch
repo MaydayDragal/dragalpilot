@@ -1,0 +1,36 @@
+From d2accb89808306deb0b2bd28f940615cc85eaf62 Mon Sep 17 00:00:00 2001
+From: Dre Gilley <dre@dregilley.com>
+Date: Sun, 4 Oct 2026 11:06:48 -0400
+Subject: [PATCH 08/12] WIP: safety tests: don't compare a test class with its
+ own parameterized variants
+
+test_tx_hook_on_wrong_safety_mode compared TestHyundaiSafetyCameraSCC_<n>
+against TestHyundaiSafetyCameraSCC (same safety mode), so the newly allowed
+0x484 tripped it.
+---
+ opendbc_repo/opendbc/safety/tests/common.py | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/opendbc_repo/opendbc/safety/tests/common.py b/opendbc_repo/opendbc/safety/tests/common.py
+index 90a0df3cfd..fb09a32970 100644
+--- a/opendbc_repo/opendbc/safety/tests/common.py
++++ b/opendbc_repo/opendbc/safety/tests/common.py
+@@ -1,4 +1,5 @@
+ import os
++import re
+ import abc
+ import math
+ import unittest
+@@ -997,6 +998,9 @@ class SafetyTest(SafetyTestBase):
+         if isinstance(tc, type) and issubclass(tc, SafetyTest) and attr != current_test:
+           tx = tc.TX_MSGS
+           if tx is not None and not attr.endswith('Base'):
++            # parameterized variants (<Class>_<n>) run the same safety mode as their base class
++            if re.fullmatch(rf"{attr}_\d+", current_test):
++              continue
+             # No point in comparing different Tesla safety modes
+             if 'Tesla' in attr and 'Tesla' in current_test:
+               continue
+-- 
+2.56.0.windows.1
+

@@ -1,0 +1,26 @@
+From 2623b19329dd042f0ccaf841519b99c23b50f24a Mon Sep 17 00:00:00 2001
+From: Dre Gilley <dre@dregilley.com>
+Date: Sun, 4 Oct 2026 11:03:10 -0400
+Subject: [PATCH 06/12] WIP: GENESIS_G70_2024 steerRatio 12.9 -> 14.1 from
+ paramsd on the car
+
+---
+ opendbc_repo/opendbc/car/hyundai/values.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/opendbc_repo/opendbc/car/hyundai/values.py b/opendbc_repo/opendbc/car/hyundai/values.py
+index b38d52feeb..ffc210797c 100644
+--- a/opendbc_repo/opendbc/car/hyundai/values.py
++++ b/opendbc_repo/opendbc/car/hyundai/values.py
+@@ -600,7 +600,7 @@ class CAR(Platforms):
+   )
+   GENESIS_G70_2024 = HyundaiPlatformConfig(
+     [HyundaiCarDocs("Genesis G70 2024", "All", car_parts=CarParts.common([CarHarness.hyundai_f]))],
+-    CarSpecs(mass=1769, wheelbase=2.83, steerRatio=12.9),  # steerRatio guesstimate from G70 1st Gen platform
++    CarSpecs(mass=1769, wheelbase=2.83, steerRatio=14.1),  # steerRatio: paramsd learned 13.9-14.3 on this car (2026-10-04)
+     flags=HyundaiFlags.CHECKSUM_CRC8 | HyundaiFlags.CAMERA_SCC,
+   )
+   GENESIS_GV70_1ST_GEN = HyundaiCanFDPlatformConfig(
+-- 
+2.56.0.windows.1
+

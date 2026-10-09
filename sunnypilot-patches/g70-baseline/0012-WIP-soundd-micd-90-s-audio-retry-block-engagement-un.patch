@@ -1,0 +1,536 @@
+From c027a92857fab810f00a3d801ddda35f8e13c1da Mon Sep 17 00:00:00 2001
+From: Dre Gilley <dre@dregilley.com>
+Date: Mon, 5 Oct 2026 22:20:49 -0400
+Subject: [PATCH 12/12] WIP: soundd/micd: 90 s audio retry, block engagement
+ until soundd's stream is open
+
+On this comma 4 the audio device becomes openable 25-39 s after manager start;
+soundd/micd gave up after 10 x 3 s and stayed dead while onroad
+(processNotRunning for the whole drive, 5 of 21 cold-boot starts).
+
+- soundd/micd: retry 30 x 3 s
+- soundd_ready.py: /dev/shm marker with soundd's PID, written atomically once
+  the output stream is open; cleared when soundd starts
+- selfdrived: raise processNotRunning until the marker matches the running
+  soundd (10 Hz check, latched, bypassed in REPLAY/SIMULATION); not
+  selfdriveInitializing, which card.py uses to gate CAN output
+- events: "Process Not Running: soundd (audio starting)" when no process is down
+
+Tests: 33 new; 80/80 with the existing soundd/selfdrived/MADS tests (x86 shim).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ openpilot/selfdrive/selfdrived/events.py      |   3 +
+ openpilot/selfdrive/selfdrived/selfdrived.py  |  17 +-
+ .../selfdrived/tests/test_audio_gate.py       | 113 +++++++++++
+ openpilot/selfdrive/ui/soundd.py              |   6 +-
+ openpilot/selfdrive/ui/soundd_ready.py        |  67 +++++++
+ .../selfdrive/ui/tests/test_soundd_ready.py   | 189 ++++++++++++++++++
+ openpilot/system/micd.py                      |   3 +-
+ 7 files changed, 395 insertions(+), 3 deletions(-)
+ create mode 100644 openpilot/selfdrive/selfdrived/tests/test_audio_gate.py
+ create mode 100644 openpilot/selfdrive/ui/soundd_ready.py
+ create mode 100644 openpilot/selfdrive/ui/tests/test_soundd_ready.py
+
+diff --git a/openpilot/selfdrive/selfdrived/events.py b/openpilot/selfdrive/selfdrived/events.py
+index 8a8271b123..7b2a9887f5 100755
+--- a/openpilot/selfdrive/selfdrived/events.py
++++ b/openpilot/selfdrive/selfdrived/events.py
+@@ -118,6 +118,9 @@ def posenet_invalid_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.Sub
+ 
+ def process_not_running_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
+   not_running = [p.name for p in sm['managerState'].processes if not p.running and p.shouldBeRunning]
++  if not not_running:
++    # raised with every process alive: selfdrived is waiting for soundd's audio stream (SelfdriveD.audio_pending)
++    not_running = ['soundd (audio starting)']
+   msg = ', '.join(not_running)
+   return NoEntryAlert(msg, alert_text_1="Process Not Running")
+ 
+diff --git a/openpilot/selfdrive/selfdrived/selfdrived.py b/openpilot/selfdrive/selfdrived/selfdrived.py
+index dfaa94e013..363796fe9a 100755
+--- a/openpilot/selfdrive/selfdrived/selfdrived.py
++++ b/openpilot/selfdrive/selfdrived/selfdrived.py
+@@ -22,6 +22,7 @@ from openpilot.selfdrive.selfdrived.events import Events, ET
+ from openpilot.selfdrive.selfdrived.helpers import ExcessiveActuationCheck
+ from openpilot.selfdrive.selfdrived.state import StateMachine
+ from openpilot.selfdrive.selfdrived.alertmanager import AlertManager, set_offroad_alert
++from openpilot.selfdrive.ui import soundd_ready
+ 
+ from openpilot.common.version import get_build_metadata
+ from openpilot.common.hardware import HARDWARE
+@@ -155,6 +156,7 @@ class SelfdriveD(CruiseHelper):
+     self.rk = Ratekeeper(100, print_delay_threshold=None)
+ 
+     self.ignored_processes = {'mapd', }
++    self.audio_ready = False
+ 
+     # Determine startup event
+     is_remote = build_metadata.openpilot.comma_remote or build_metadata.openpilot.sunnypilot_remote
+@@ -185,6 +187,19 @@ class SelfdriveD(CruiseHelper):
+     CruiseHelper.__init__(self, self.CP)
+     self.button_state_tracker = ButtonStateTracker()
+ 
++  def audio_pending(self) -> bool:
++    """True until soundd reports an open audio stream (soundd_ready.py); latched once ready, checked at 10 Hz."""
++    if self.audio_ready or SIMULATION or REPLAY:
++      return False
++    if self.sm.frame % 10 == 0 and soundd_ready.audio_ready(self.sm['managerState'].processes, bool(self.sm.recv_frame['managerState'])):
++      self.audio_ready = True
++      cloudlog.info(f"selfdrived: soundd audio stream ready at frame {self.sm.frame}")
++    return not self.audio_ready
++
++  def process_not_running(self, not_running: set[str]) -> bool:
++    # until soundd has an open audio stream, treat it as not running so alerts are audible before engagement
++    return bool(not_running - self.ignored_processes) or self.audio_pending()
++
+   def update_events(self, CS):
+     """Compute onroadEvents from carState"""
+ 
+@@ -406,7 +421,7 @@ class SelfdriveD(CruiseHelper):
+       if not_running != self.not_running_prev:
+         cloudlog.event("process_not_running", not_running=not_running, error=True)
+       self.not_running_prev = not_running
+-    if self.sm.recv_frame['managerState'] and (not_running - self.ignored_processes):
++    if self.sm.recv_frame['managerState'] and self.process_not_running(not_running):
+       self.events.add(EventName.processNotRunning)
+     else:
+       if not SIMULATION and not self.rk.lagging:
+diff --git a/openpilot/selfdrive/selfdrived/tests/test_audio_gate.py b/openpilot/selfdrive/selfdrived/tests/test_audio_gate.py
+new file mode 100644
+index 0000000000..7eeb8cb6b9
+--- /dev/null
++++ b/openpilot/selfdrive/selfdrived/tests/test_audio_gate.py
+@@ -0,0 +1,113 @@
++import os
++from types import SimpleNamespace
++from unittest import mock
++
++from openpilot.cereal import messaging
++from openpilot.common.test import OpenpilotTestCase
++from openpilot.selfdrive.selfdrived import selfdrived
++from openpilot.selfdrive.selfdrived.events import process_not_running_alert
++from openpilot.selfdrive.selfdrived.selfdrived import SelfdriveD
++from openpilot.selfdrive.ui import soundd_ready
++
++
++def manager_state(*procs):
++  msg = messaging.new_message('managerState')
++  msg.managerState.init('processes', len(procs))
++  for p, (name, running, should_run, pid) in zip(msg.managerState.processes, procs, strict=True):
++    p.name, p.running, p.shouldBeRunning, p.pid = name, running, should_run, pid
++  return msg.managerState
++
++
++class FakeSM:
++  def __init__(self, ms, frame=0, received=True):
++    self.ms, self.frame = ms, frame
++    self.recv_frame = {'managerState': 1 if received else 0}
++
++  def __getitem__(self, key):
++    assert key == 'managerState'
++    return self.ms
++
++
++class TestAudioGate(OpenpilotTestCase):
++  """SelfdriveD.audio_pending: engagement is blocked (processNotRunning) until soundd has an open audio stream."""
++  def setup_method(self):
++    self.ms = manager_state(("micd", True, True, 50), ("soundd", True, True, 100))
++
++  def teardown_method(self):
++    if os.path.exists(soundd_ready.marker_path()):
++      os.remove(soundd_ready.marker_path())
++
++  def _sd(self, frame=0, received=True):
++    return SimpleNamespace(audio_ready=False, sm=FakeSM(self.ms, frame, received))
++
++  def test_pending_until_stream_open(self):
++    sd = self._sd()
++    for frame in range(300):
++      sd.sm.frame = frame
++      assert SelfdriveD.audio_pending(sd)
++    soundd_ready.mark_ready(100)
++    sd.sm.frame = 300
++    assert not SelfdriveD.audio_pending(sd)
++
++  def test_pending_without_manager_state(self):
++    soundd_ready.mark_ready(100)
++    assert SelfdriveD.audio_pending(self._sd(received=False))
++
++  def test_checked_at_10hz(self):
++    soundd_ready.mark_ready(100)
++    sd = self._sd(frame=5)
++    assert SelfdriveD.audio_pending(sd)
++    sd.sm.frame = 10
++    assert not SelfdriveD.audio_pending(sd)
++
++  def test_latched_once_ready(self):
++    soundd_ready.mark_ready(100)
++    sd = self._sd()
++    assert not SelfdriveD.audio_pending(sd)
++    os.remove(soundd_ready.marker_path())
++    self.ms = manager_state(("soundd", True, True, 101))
++    for frame in range(1, 50):
++      sd.sm.frame = frame
++      assert not SelfdriveD.audio_pending(sd)
++
++  def test_stale_marker_keeps_blocking(self):
++    soundd_ready.mark_ready(99)
++    assert SelfdriveD.audio_pending(self._sd())
++
++  def test_replay_and_simulation_not_gated(self):
++    for flag in ("REPLAY", "SIMULATION"):
++      with mock.patch.object(selfdrived, flag, True):
++        assert not SelfdriveD.audio_pending(self._sd())
++    assert SelfdriveD.audio_pending(self._sd())
++
++
++  def test_process_not_running_event(self):
++    """processNotRunning is raised while audio is pending even though every process is alive, and for real crashes."""
++    sd = self._sd()
++    sd.ignored_processes = {'mapd'}
++    sd.process_not_running = lambda nr: SelfdriveD.process_not_running(sd, nr)
++    sd.audio_pending = lambda: SelfdriveD.audio_pending(sd)
++    assert sd.process_not_running(set())         # all alive, audio pending
++    assert sd.process_not_running({'mapd'})      # only an ignored process down, audio pending
++    soundd_ready.mark_ready(100)
++    assert not sd.process_not_running(set())     # audio ready
++    assert not sd.process_not_running({'mapd'})  # ignored process stays ignored
++    assert sd.process_not_running({'micd'})      # real crash still raises it
++
++
++class TestProcessNotRunningAlert(OpenpilotTestCase):
++  def _text(self, ms):
++    return process_not_running_alert(None, None, {'managerState': ms}, False, 0, None).alert_text_2
++
++  def test_audio_starting_when_nothing_is_down(self):
++    assert self._text(manager_state(("micd", True, True, 50), ("soundd", True, True, 100))) == "soundd (audio starting)"
++
++  def test_real_crash_listed(self):
++    assert self._text(manager_state(("micd", False, True, 50), ("soundd", True, True, 100))) == "micd"
++
++  def test_crashed_soundd_listed_once(self):
++    assert self._text(manager_state(("micd", False, True, 50), ("soundd", False, True, 100))) == "micd, soundd"
++
++  def test_no_marker_lookup_in_replay(self):
++    with mock.patch.object(soundd_ready, "is_ready", side_effect=AssertionError("alert must not read the marker")):
++      assert self._text(manager_state(("micd", False, True, 50))) == "micd"
+diff --git a/openpilot/selfdrive/ui/soundd.py b/openpilot/selfdrive/ui/soundd.py
+index a61e26b0b6..484b586501 100644
+--- a/openpilot/selfdrive/ui/soundd.py
++++ b/openpilot/selfdrive/ui/soundd.py
+@@ -12,6 +12,7 @@ from openpilot.common.utils import retry
+ from openpilot.common.swaglog import cloudlog
+ 
+ from openpilot.system import micd
++from openpilot.selfdrive.ui import soundd_ready
+ from openpilot.common.hardware import HARDWARE
+ 
+ from openpilot.sunnypilot.selfdrive.ui.quiet_mode import QuietMode
+@@ -168,7 +169,8 @@ class Soundd(QuietMode):
+     volume = ((weighted_db - AMBIENT_DB) / DB_SCALE) * (MAX_VOLUME - MIN_VOLUME) + MIN_VOLUME
+     return math.pow(VOLUME_BASE, (np.clip(volume, MIN_VOLUME, MAX_VOLUME) - 1))
+ 
+-  @retry(attempts=10, delay=3)
++  # 30 x 3 s: the audio device can take 25-40 s after manager start to become usable on a comma 4 (soundd_ready.py)
++  @retry(attempts=30, delay=3)
+   def get_stream(self, sd):
+     # reload sounddevice to reinitialize portaudio
+     sd._terminate()
+@@ -182,10 +184,12 @@ class Soundd(QuietMode):
+ 
+     sm = messaging.SubMaster(['selfdriveState', 'selfdriveStateSP', 'soundPressure'])
+ 
++    soundd_ready.clear()
+     with self.get_stream(sd) as stream:
+       rk = Ratekeeper(20)
+ 
+       cloudlog.info(f"soundd stream started: {stream.samplerate=} {stream.channels=} {stream.dtype=} {stream.device=}, {stream.blocksize=}")
++      soundd_ready.mark_ready()
+       while True:
+         sm.update(0)
+ 
+diff --git a/openpilot/selfdrive/ui/soundd_ready.py b/openpilot/selfdrive/ui/soundd_ready.py
+new file mode 100644
+index 0000000000..3bbf4ee9a2
+--- /dev/null
++++ b/openpilot/selfdrive/ui/soundd_ready.py
+@@ -0,0 +1,67 @@
++"""
++soundd audio-stream readiness marker.
++
++On some comma devices the audio device only becomes usable 25-40 s after the manager starts, so soundd may still be
++waiting for its output stream when the car is ready to engage. soundd writes its PID here once the stream is open, and
++selfdrived blocks engagement (processNotRunning) until the marker matches the running soundd's PID, so that alerts can
++be heard before the system can be engaged. The PID check makes a marker left by an earlier soundd instance invalid.
++"""
++import os
++import tempfile
++
++from openpilot.common.hardware.hw import Paths
++from openpilot.common.swaglog import cloudlog
++
++
++def marker_path() -> str:
++  prefix = os.environ.get("OPENPILOT_PREFIX")
++  name = f"soundd_stream_ready_{prefix}" if prefix else "soundd_stream_ready"
++  return os.path.join(Paths.shm_path(), name)
++
++
++def clear() -> None:
++  """Remove a marker left by an earlier soundd instance (called when soundd starts)."""
++  try:
++    os.remove(marker_path())
++  except FileNotFoundError:
++    pass
++  except OSError:
++    cloudlog.exception("soundd: failed to clear stream ready marker")
++
++
++def mark_ready(pid: int | None = None) -> None:
++  """Atomically record that the soundd process `pid` (default: this process) has an open output stream."""
++  pid = os.getpid() if pid is None else pid
++  path = marker_path()
++  tmp = None
++  try:
++    with tempfile.NamedTemporaryFile("w", dir=os.path.dirname(path), delete=False) as f:
++      tmp = f.name
++      f.write(str(pid))
++    os.replace(tmp, path)
++  except OSError:
++    # fail closed: without the marker selfdrived keeps engagement blocked
++    cloudlog.exception("soundd: failed to write stream ready marker")
++    if tmp is not None and os.path.exists(tmp):
++      os.remove(tmp)
++
++
++def is_ready(pid: int) -> bool:
++  try:
++    with open(marker_path()) as f:
++      return f.read().strip() == str(pid)
++  except (OSError, ValueError):  # missing or unreadable marker: not ready
++    return False
++
++
++def audio_ready(processes, manager_state_received: bool) -> bool:
++  """True once the managed soundd process has reported an open output stream.
++
++  processes: managerState.processes. If soundd isn't managed or shouldn't be running there is nothing to wait for.
++  """
++  if not manager_state_received:
++    return False
++  soundd = next((p for p in processes if p.name == "soundd"), None)
++  if soundd is None or not soundd.shouldBeRunning:
++    return True
++  return soundd.running and is_ready(soundd.pid)
+diff --git a/openpilot/selfdrive/ui/tests/test_soundd_ready.py b/openpilot/selfdrive/ui/tests/test_soundd_ready.py
+new file mode 100644
+index 0000000000..23bc1107f5
+--- /dev/null
++++ b/openpilot/selfdrive/ui/tests/test_soundd_ready.py
+@@ -0,0 +1,189 @@
++import contextlib
++import os
++import sys
++import types
++from unittest import mock
++
++from openpilot.cereal import messaging
++from openpilot.common.hardware.hw import Paths
++from openpilot.common.test import OpenpilotTestCase
++from openpilot.selfdrive.ui import soundd_ready
++from openpilot.selfdrive.ui.soundd import Soundd
++from openpilot.system.micd import Mic
++
++
++def manager_processes(*procs):
++  """procs: (name, running, shouldBeRunning, pid) tuples -> managerState.processes"""
++  msg = messaging.new_message('managerState')
++  msg.managerState.init('processes', len(procs))
++  for p, (name, running, should_run, pid) in zip(msg.managerState.processes, procs, strict=True):
++    p.name, p.running, p.shouldBeRunning, p.pid = name, running, should_run, pid
++  return msg.managerState.processes
++
++
++class FakeSoundDevice:
++  """Stands in for the sounddevice module: the first `fail` stream opens raise, like PortAudio before the card is ready."""
++  def __init__(self, fail):
++    self.fail = fail
++    self.opens = 0
++
++  def _terminate(self):
++    pass
++
++  def _initialize(self):
++    pass
++
++  def _open(self, **kwargs):
++    self.opens += 1
++    if self.opens <= self.fail:
++      raise RuntimeError("Error querying device -1")
++    return "stream"
++
++  OutputStream = _open
++  InputStream = _open
++
++
++class StreamOwner:
++  callback = None
++
++
++class TestSounddReadyMarker(OpenpilotTestCase):
++  def teardown_method(self):
++    if os.path.exists(soundd_ready.marker_path()):
++      os.remove(soundd_ready.marker_path())
++
++  def test_marker_path_is_shm_and_prefixed(self):
++    path = soundd_ready.marker_path()
++    assert os.path.dirname(path) == Paths.shm_path()
++    assert os.environ["OPENPILOT_PREFIX"] in os.path.basename(path)
++
++  def test_missing_marker_is_not_ready(self):
++    assert not soundd_ready.is_ready(1234)
++
++  def test_marker_matches_only_its_pid(self):
++    soundd_ready.mark_ready(1234)
++    assert soundd_ready.is_ready(1234)
++    assert not soundd_ready.is_ready(4321)
++
++  def test_new_instance_replaces_marker(self):
++    soundd_ready.mark_ready(1)
++    soundd_ready.mark_ready(2)
++    assert not soundd_ready.is_ready(1)
++    assert soundd_ready.is_ready(2)
++
++  def test_default_pid_is_own_process(self):
++    soundd_ready.mark_ready()
++    assert soundd_ready.is_ready(os.getpid())
++
++  def test_write_failure_fails_closed(self, mocker):
++    mocker.patch("openpilot.selfdrive.ui.soundd_ready.tempfile.NamedTemporaryFile", side_effect=OSError("read-only"))
++    soundd_ready.mark_ready(1234)  # must not raise
++    assert not soundd_ready.is_ready(1234)
++
++  def test_failed_replace_leaves_no_temp_file(self, mocker):
++    mocker.patch("openpilot.selfdrive.ui.soundd_ready.os.replace", side_effect=OSError("busy"))
++    before = set(os.listdir(Paths.shm_path()))
++    soundd_ready.mark_ready(1234)
++    assert set(os.listdir(Paths.shm_path())) == before
++    assert not soundd_ready.is_ready(1234)
++
++  def test_corrupt_marker_is_not_ready(self):
++    with open(soundd_ready.marker_path(), "wb") as f:
++      f.write(b"\xff\xfe\x00")
++    assert not soundd_ready.is_ready(1234)
++
++  def test_clear_removes_previous_marker(self):
++    soundd_ready.mark_ready(1234)
++    soundd_ready.clear()
++    assert not soundd_ready.is_ready(1234)
++    soundd_ready.clear()  # no marker: no error
++
++
++class TestAudioReady(OpenpilotTestCase):
++  def teardown_method(self):
++    if os.path.exists(soundd_ready.marker_path()):
++      os.remove(soundd_ready.marker_path())
++
++  def test_no_manager_state_yet(self):
++    soundd_ready.mark_ready(100)
++    assert not soundd_ready.audio_ready(manager_processes(("soundd", True, True, 100)), manager_state_received=False)
++
++  def test_waiting_for_stream(self):
++    assert not soundd_ready.audio_ready(manager_processes(("soundd", True, True, 100)), True)
++
++  def test_stream_open(self):
++    soundd_ready.mark_ready(100)
++    assert soundd_ready.audio_ready(manager_processes(("micd", True, True, 99), ("soundd", True, True, 100)), True)
++
++  def test_stale_marker_from_previous_soundd(self):
++    soundd_ready.mark_ready(77)
++    assert not soundd_ready.audio_ready(manager_processes(("soundd", True, True, 100)), True)
++
++  def test_crashed_soundd_is_not_ready(self):
++    soundd_ready.mark_ready(100)
++    assert not soundd_ready.audio_ready(manager_processes(("soundd", False, True, 100)), True)
++
++  def test_soundd_not_managed(self):
++    assert soundd_ready.audio_ready(manager_processes(("micd", True, True, 99)), True)
++
++  def test_soundd_not_supposed_to_run(self):
++    assert soundd_ready.audio_ready(manager_processes(("soundd", False, False, 0)), True)
++
++
++class StopLoop(Exception):
++  pass
++
++
++class TestSounddThreadMarker(OpenpilotTestCase):
++  """soundd clears an old marker when it starts and writes its own only once the output stream is open."""
++  def _run(self, mocker, get_stream):
++    calls = []
++    patcher = mock.patch.dict(sys.modules, {"sounddevice": types.ModuleType("sounddevice")})
++    patcher.start()
++    self.addCleanup(patcher.stop)
++    mocker.patch("openpilot.selfdrive.ui.soundd.soundd_ready.clear", side_effect=lambda: calls.append("clear"))
++    mocker.patch("openpilot.selfdrive.ui.soundd.soundd_ready.mark_ready", side_effect=lambda: calls.append("mark_ready"))
++    sm = mocker.patch("openpilot.selfdrive.ui.soundd.messaging.SubMaster").return_value
++    sm.update.side_effect = StopLoop  # leave the main loop on its first iteration
++
++    def stream(sd):
++      calls.append("get_stream")
++      return get_stream(sd)
++    with contextlib.suppress(StopLoop, RuntimeError):
++      Soundd.soundd_thread(types.SimpleNamespace(get_stream=stream))
++    return calls
++
++  def test_marks_ready_after_stream_open(self, mocker):
++    assert self._run(mocker, lambda sd: mock.MagicMock()) == ["clear", "get_stream", "mark_ready"]
++
++  def test_no_marker_when_stream_never_opens(self, mocker):
++    def fail(sd):
++      raise RuntimeError("get_stream failed after retry")
++    assert self._run(mocker, fail) == ["clear", "get_stream"]
++
++
++class TestAudioStreamRetryBudget(OpenpilotTestCase):
++  def _get(self, get_stream, fail, mocker):
++    sleep = mocker.patch("openpilot.common.utils.time.sleep")
++    sd = FakeSoundDevice(fail)
++    try:
++      return get_stream(StreamOwner(), sd), sd, sum(c.args[0] for c in sleep.call_args_list)
++    except Exception as e:
++      return e, sd, sum(c.args[0] for c in sleep.call_args_list)
++
++  def test_soundd_waits_through_30_attempts(self, mocker):
++    stream, sd, slept = self._get(Soundd.get_stream, 29, mocker)
++    assert stream == "stream" and sd.opens == 30 and slept == 87
++
++  def test_soundd_gives_up_after_30_attempts(self, mocker):
++    err, sd, slept = self._get(Soundd.get_stream, 30, mocker)
++    assert isinstance(err, Exception) and "failed after retry" in str(err)
++    assert sd.opens == 30 and slept == 90
++
++  def test_micd_waits_through_30_attempts(self, mocker):
++    stream, sd, slept = self._get(Mic.get_stream, 29, mocker)
++    assert stream == "stream" and sd.opens == 30 and slept == 87
++
++  def test_micd_gives_up_after_30_attempts(self, mocker):
++    err, sd, slept = self._get(Mic.get_stream, 30, mocker)
++    assert isinstance(err, Exception) and sd.opens == 30 and slept == 90
+diff --git a/openpilot/system/micd.py b/openpilot/system/micd.py
+index 7167aad137..624939646e 100755
+--- a/openpilot/system/micd.py
++++ b/openpilot/system/micd.py
+@@ -102,7 +102,8 @@ class Mic:
+ 
+         self.measurements = self.measurements[FFT_SAMPLES:]
+ 
+-  @retry(attempts=10, delay=3)
++  # 30 x 3 s, as soundd: the audio device can take 25-40 s after manager start to become usable on a comma 4
++  @retry(attempts=30, delay=3)
+   def get_stream(self, sd):
+     # reload sounddevice to reinitialize portaudio
+     sd._terminate()
+-- 
+2.56.0.windows.1
+

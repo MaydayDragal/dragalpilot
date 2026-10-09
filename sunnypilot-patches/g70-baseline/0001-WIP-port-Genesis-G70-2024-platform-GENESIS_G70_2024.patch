@@ -1,0 +1,121 @@
+From 392f9b6ea98cc1633dffe61b2e251c774bcd4319 Mon Sep 17 00:00:00 2001
+From: Dre Gilley <dre@dregilley.com>
+Date: Sat, 3 Oct 2026 22:45:24 -0400
+Subject: [PATCH 01/12] WIP: port Genesis G70 2024 platform (GENESIS_G70_2024)
+
+Adapted from commaai/opendbc cfb743f4 / PR #1134 (pinned by sunnypilot
+branch g70-2024-port-new) onto dev 0b2c431d:
+- fingerprints: camera + radar FW for G70 2024
+- values: GENESIS_G70_2024 CAN platform, CHECKSUM_CRC8 | CAMERA_SCC
+- hyundaican: LKAS11 LDWS fields list (manual merge, list grew upstream)
+- torque override (manual merge into port extensions section)
+- sunnypilot car_list.json entry (hand-written; generator check pending)
+- routes: non_tested_cars port extension (reference routes not in CI)
+
+No safety (panda) changes. UNTESTED: no Linux toolchain yet.
+
+Assisted-by: Claude
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ opendbc_repo/opendbc/car/hyundai/fingerprints.py   |  8 ++++++++
+ opendbc_repo/opendbc/car/hyundai/hyundaican.py     |  3 ++-
+ opendbc_repo/opendbc/car/hyundai/values.py         |  5 +++++
+ opendbc_repo/opendbc/car/tests/routes.py           |  1 +
+ opendbc_repo/opendbc/car/torque_data/override.toml |  1 +
+ opendbc_repo/opendbc/sunnypilot/car/car_list.json  | 10 ++++++++++
+ 6 files changed, 27 insertions(+), 1 deletion(-)
+
+diff --git a/opendbc_repo/opendbc/car/hyundai/fingerprints.py b/opendbc_repo/opendbc/car/hyundai/fingerprints.py
+index acbac58065..30768390f2 100644
+--- a/opendbc_repo/opendbc/car/hyundai/fingerprints.py
++++ b/opendbc_repo/opendbc/car/hyundai/fingerprints.py
+@@ -1300,6 +1300,14 @@ FW_VERSIONS = {
+       b'\xf1\x00T01G00BL  T01I00A1  DOS2T16X4XI00NS0\x99L\xeeq',
+     ],
+   },
++  CAR.GENESIS_G70_2024: {
++    (Ecu.fwdCamera, 0x7c4, None): [
++      b'\xf1\x00IK  MFC  AT USA LHD 1.00 1.02 99211-G9500 230712',
++    ],
++    (Ecu.fwdRadar, 0x7d0, None): [
++      b'\xf1\x00IKPE RDR -----      1.00 1.00 99110-G9600         ',
++    ],
++  },
+ }
+ 
+ FW_VERSIONS = merge_fw_versions(FW_VERSIONS, FW_VERSIONS_EXT)
+diff --git a/opendbc_repo/opendbc/car/hyundai/hyundaican.py b/opendbc_repo/opendbc/car/hyundai/hyundaican.py
+index 426e11bd9b..5bdca5dfc3 100644
+--- a/opendbc_repo/opendbc/car/hyundai/hyundaican.py
++++ b/opendbc_repo/opendbc/car/hyundai/hyundaican.py
+@@ -45,7 +45,8 @@ def create_lkas11(packer, frame, CP, apply_torque, steer_req,
+                            CAR.HYUNDAI_SANTA_FE_PHEV_2022, CAR.KIA_STINGER_2022, CAR.KIA_K5_HEV_2020, CAR.KIA_CEED,
+                            CAR.HYUNDAI_AZERA_6TH_GEN, CAR.HYUNDAI_AZERA_HEV_6TH_GEN, CAR.HYUNDAI_CUSTIN_1ST_GEN, CAR.HYUNDAI_KONA_2022,
+                            CAR.KIA_CEED_PHEV_2022_NON_SCC, CAR.HYUNDAI_KONA_EV_NON_SCC, CAR.HYUNDAI_ELANTRA_2022_NON_SCC,
+-                           CAR.GENESIS_G70_2021_NON_SCC, CAR.KIA_SELTOS_2023_NON_SCC, CAR.HYUNDAI_BAYON_1ST_GEN_NON_SCC):
++                           CAR.GENESIS_G70_2021_NON_SCC, CAR.KIA_SELTOS_2023_NON_SCC, CAR.HYUNDAI_BAYON_1ST_GEN_NON_SCC,
++                           CAR.GENESIS_G70_2024):
+     values["CF_Lkas_LdwsActivemode"] = int(left_lane) + (int(right_lane) << 1)
+     values["CF_Lkas_LdwsOpt_USM"] = 2
+ 
+diff --git a/opendbc_repo/opendbc/car/hyundai/values.py b/opendbc_repo/opendbc/car/hyundai/values.py
+index 5f43c277bb..a9b5cab228 100644
+--- a/opendbc_repo/opendbc/car/hyundai/values.py
++++ b/opendbc_repo/opendbc/car/hyundai/values.py
+@@ -598,6 +598,11 @@ class CAR(Platforms):
+     GENESIS_G70.specs,
+     flags=HyundaiFlags.MANDO_RADAR,
+   )
++  GENESIS_G70_2024 = HyundaiPlatformConfig(
++    [HyundaiCarDocs("Genesis G70 2024", "All", car_parts=CarParts.common([CarHarness.hyundai_l]))],
++    CarSpecs(mass=1769, wheelbase=2.83, steerRatio=12.9),  # steerRatio guesstimate from G70 1st Gen platform
++    flags=HyundaiFlags.CHECKSUM_CRC8 | HyundaiFlags.CAMERA_SCC,
++  )
+   GENESIS_GV70_1ST_GEN = HyundaiCanFDPlatformConfig(
+     [
+       # TODO: Hyundai P is likely the correct harness for HDA II for 2.5T (unsupported due to missing ADAS ECU, is that the radar?)
+diff --git a/opendbc_repo/opendbc/car/tests/routes.py b/opendbc_repo/opendbc/car/tests/routes.py
+index 91d19a10f2..ee968b59e6 100644
+--- a/opendbc_repo/opendbc/car/tests/routes.py
++++ b/opendbc_repo/opendbc/car/tests/routes.py
+@@ -44,6 +44,7 @@ non_tested_cars = [
+   HYUNDAI.KIA_FORTE_2021_NON_SCC,
+   HYUNDAI.KIA_SELTOS_2023_NON_SCC,
+   HYUNDAI.GENESIS_G70_2021_NON_SCC,
++  HYUNDAI.GENESIS_G70_2024,  # port ref routes (not in CI): a6310918f9699ef5/2024-02-28--14-55-10, a6310918f9699ef5/2024-02-27--20-17-09
+   HONDA.HONDA_CLARITY,
+   GM.CHEVROLET_BOLT_NON_ACC,
+   GM.CHEVROLET_BOLT_NON_ACC_1ST_GEN,
+diff --git a/opendbc_repo/opendbc/car/torque_data/override.toml b/opendbc_repo/opendbc/car/torque_data/override.toml
+index a34c3c0fb9..b93d69b087 100644
+--- a/opendbc_repo/opendbc/car/torque_data/override.toml
++++ b/opendbc_repo/opendbc/car/torque_data/override.toml
+@@ -116,3 +116,4 @@ legend = ["LAT_ACCEL_FACTOR", "MAX_LAT_ACCEL_MEASURED", "FRICTION"]
+ # port extensions
+ "HONDA_CLARITY" = [0.96, 0.4018518740819229, 0.19]
+ "CHEVROLET_MALIBU_NON_ACC_9TH_GEN" = [1.85, 1.85, 0.075]
++"GENESIS_G70_2024" = [2.7, 2.7, 0.11]
+diff --git a/opendbc_repo/opendbc/sunnypilot/car/car_list.json b/opendbc_repo/opendbc/sunnypilot/car/car_list.json
+index 536c425828..58571e9f42 100644
+--- a/opendbc_repo/opendbc/sunnypilot/car/car_list.json
++++ b/opendbc_repo/opendbc/sunnypilot/car/car_list.json
+@@ -853,6 +853,16 @@
+     ],
+     "package": "All"
+   },
++  "Genesis G70 2024": {
++    "platform": "GENESIS_G70_2024",
++    "make": "Genesis",
++    "brand": "hyundai",
++    "model": "G70",
++    "year": [
++      "2024"
++    ],
++    "package": "All"
++  },
+   "Genesis G80 2017": {
+     "platform": "HYUNDAI_GENESIS",
+     "make": "Genesis",
+-- 
+2.56.0.windows.1
+

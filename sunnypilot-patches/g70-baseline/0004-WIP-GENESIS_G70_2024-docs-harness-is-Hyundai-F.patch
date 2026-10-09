@@ -1,0 +1,27 @@
+From 7e9d0755d999b22036227d61356386e230d45114 Mon Sep 17 00:00:00 2001
+From: Dre Gilley <dre@dregilley.com>
+Date: Sun, 4 Oct 2026 00:16:11 -0400
+Subject: [PATCH 04/12] WIP: GENESIS_G70_2024 docs harness is Hyundai F
+
+The user's car has a Harness F installed, and the PR #1134 author also
+reports Harness F. Docs/parts entry only; no runtime effect.
+---
+ opendbc_repo/opendbc/car/hyundai/values.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/opendbc_repo/opendbc/car/hyundai/values.py b/opendbc_repo/opendbc/car/hyundai/values.py
+index a9b5cab228..b38d52feeb 100644
+--- a/opendbc_repo/opendbc/car/hyundai/values.py
++++ b/opendbc_repo/opendbc/car/hyundai/values.py
+@@ -599,7 +599,7 @@ class CAR(Platforms):
+     flags=HyundaiFlags.MANDO_RADAR,
+   )
+   GENESIS_G70_2024 = HyundaiPlatformConfig(
+-    [HyundaiCarDocs("Genesis G70 2024", "All", car_parts=CarParts.common([CarHarness.hyundai_l]))],
++    [HyundaiCarDocs("Genesis G70 2024", "All", car_parts=CarParts.common([CarHarness.hyundai_f]))],
+     CarSpecs(mass=1769, wheelbase=2.83, steerRatio=12.9),  # steerRatio guesstimate from G70 1st Gen platform
+     flags=HyundaiFlags.CHECKSUM_CRC8 | HyundaiFlags.CAMERA_SCC,
+   )
+-- 
+2.56.0.windows.1
+

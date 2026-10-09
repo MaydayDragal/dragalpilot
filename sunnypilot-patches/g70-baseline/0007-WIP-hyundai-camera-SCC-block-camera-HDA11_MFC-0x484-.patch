@@ -1,0 +1,45 @@
+From 92e72004ac480b44556d1a4dcf20472d7d499bf7 Mon Sep 17 00:00:00 2001
+From: Dre Gilley <dre@dregilley.com>
+Date: Sun, 4 Oct 2026 11:03:36 -0400
+Subject: [PATCH 07/12] WIP: hyundai camera SCC: block camera HDA11_MFC (0x484)
+ to suppress grasp warning
+
+Port of commaai/panda#2045 (required by commaai/opendbc#1134 for
+GENESIS_G70_2024) to the pinned opendbc safety: a check_relay TX entry
+blocks forwarding of the camera's 0x484 to the car and adds relay-malfunction
+detection on it. Applies to non-long camera-SCC Hyundai (incl. KONA_2022,
+KONA_EV_2022). openpilot does not transmit 0x484.
+---
+ opendbc_repo/opendbc/safety/modes/hyundai.h       | 1 +
+ opendbc_repo/opendbc/safety/tests/test_hyundai.py | 3 +++
+ 2 files changed, 4 insertions(+)
+
+diff --git a/opendbc_repo/opendbc/safety/modes/hyundai.h b/opendbc_repo/opendbc/safety/modes/hyundai.h
+index b4a1fe54f1..692581bb02 100644
+--- a/opendbc_repo/opendbc/safety/modes/hyundai.h
++++ b/opendbc_repo/opendbc/safety/modes/hyundai.h
+@@ -310,6 +310,7 @@ static safety_config hyundai_init(uint16_t param) {
+ 
+   static const CanMsg HYUNDAI_CAMERA_SCC_TX_MSGS[] = {
+     HYUNDAI_COMMON_TX_MSGS(2)
++    {0x484, 0, 8, .check_relay = true},  // HDA11_MFC Bus 0: block the camera's copy to suppress "grasp not detected" (commaai/panda#2045)
+   };
+ 
+   static const CanMsg HYUNDAI_CAMERA_SCC_LONG_TX_MSGS[] = {
+diff --git a/opendbc_repo/opendbc/safety/tests/test_hyundai.py b/opendbc_repo/opendbc/safety/tests/test_hyundai.py
+index 333a0d93b4..a24c2d3bd0 100755
+--- a/opendbc_repo/opendbc/safety/tests/test_hyundai.py
++++ b/opendbc_repo/opendbc/safety/tests/test_hyundai.py
+@@ -268,6 +268,9 @@ class TestHyundaiSafetyAltLimits2(TestHyundaiSafety):
+ 
+ @parameterized_class(LDA_BUTTON)
+ class TestHyundaiSafetyCameraSCC(TestHyundaiSafety):
++  TX_MSGS = [[0x340, 0], [0x4F1, 2], [0x484, 0], [0x485, 0]]
++  RELAY_MALFUNCTION_ADDRS = {0: (0x340, 0x484, 0x485)}  # LKAS11, HDA11_MFC, LFAHDA_MFC
++  FWD_BLACKLISTED_ADDRS = {2: [0x340, 0x484, 0x485]}
+   BUTTONS_TX_BUS = 2  # tx on 2, rx on 0
+   SCC_BUS = 2  # rx on 2
+ 
+-- 
+2.56.0.windows.1
+

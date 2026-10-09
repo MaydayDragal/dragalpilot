@@ -1,0 +1,40 @@
+From 82f58a9a8c4af2f10d23d13fb1631deca98d4efd Mon Sep 17 00:00:00 2001
+From: Dre Gilley <dre@dregilley.com>
+Date: Sun, 4 Oct 2026 11:19:57 -0400
+Subject: [PATCH 11/12] WIP: review fixes: stricter same-class skip (identical
+ TX lists); torque comment range
+
+---
+ opendbc_repo/opendbc/car/torque_data/override.toml | 2 +-
+ opendbc_repo/opendbc/safety/tests/common.py        | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/opendbc_repo/opendbc/car/torque_data/override.toml b/opendbc_repo/opendbc/car/torque_data/override.toml
+index 00f15c2508..42d0950a41 100644
+--- a/opendbc_repo/opendbc/car/torque_data/override.toml
++++ b/opendbc_repo/opendbc/car/torque_data/override.toml
+@@ -116,5 +116,5 @@ legend = ["LAT_ACCEL_FACTOR", "MAX_LAT_ACCEL_MEASURED", "FRICTION"]
+ # port extensions
+ "HONDA_CLARITY" = [0.96, 0.4018518740819229, 0.19]
+ "CHEVROLET_MALIBU_NON_ACC_9TH_GEN" = [1.85, 1.85, 0.075]
+-# GENESIS_G70_2024: latAccelFactor and friction from this car's torqued estimates (4.0-4.5, 0.067-0.075) over 4 drives, 2026-10-04
++# GENESIS_G70_2024: latAccelFactor and friction from this car's torqued raw estimates (3.97-4.47, 0.067-0.075) over 4 drives, 2026-10-04
+ "GENESIS_G70_2024" = [4.0, 2.7, 0.07]
+diff --git a/opendbc_repo/opendbc/safety/tests/common.py b/opendbc_repo/opendbc/safety/tests/common.py
+index bf2b0d0414..ab26e2afef 100644
+--- a/opendbc_repo/opendbc/safety/tests/common.py
++++ b/opendbc_repo/opendbc/safety/tests/common.py
+@@ -998,8 +998,8 @@ class SafetyTest(SafetyTestBase):
+         if isinstance(tc, type) and issubclass(tc, SafetyTest) and attr != current_test:
+           tx = tc.TX_MSGS
+           if tx is not None and not attr.endswith('Base'):
+-            # parameterized variants (<Class>_<n>) run the same safety mode as their base class and each other
+-            if re.sub(r"_\d+$", "", attr) == re.sub(r"_\d+$", "", current_test):
++            # parameterized variants (<Class>_<n>) of the same class with the same TX list run the same safety mode
++            if re.sub(r"_\d+$", "", attr) == re.sub(r"_\d+$", "", current_test) and tx == self.TX_MSGS:
+               continue
+             # No point in comparing different Tesla safety modes
+             if 'Tesla' in attr and 'Tesla' in current_test:
+-- 
+2.56.0.windows.1
+

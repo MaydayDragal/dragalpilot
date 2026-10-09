@@ -1,0 +1,27 @@
+From c895200ecb3aef4a9a41db17124671e6b2029f0c Mon Sep 17 00:00:00 2001
+From: Dre Gilley <dre@dregilley.com>
+Date: Sun, 4 Oct 2026 11:03:03 -0400
+Subject: [PATCH 05/12] WIP: GENESIS_G70_2024 torque tune from on-car torqued
+ estimates
+
+latAccelFactor 2.7 -> 4.0, friction 0.11 -> 0.07. torqued raw estimates on
+4 drives: latAccelFactor 3.97-4.47, friction 0.067-0.075. torqued can only
+move +-30% from the offline value, so 2.7 capped it at 3.51.
+---
+ opendbc_repo/opendbc/car/torque_data/override.toml | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/opendbc_repo/opendbc/car/torque_data/override.toml b/opendbc_repo/opendbc/car/torque_data/override.toml
+index b93d69b087..00f15c2508 100644
+--- a/opendbc_repo/opendbc/car/torque_data/override.toml
++++ b/opendbc_repo/opendbc/car/torque_data/override.toml
+@@ -116,4 +116,5 @@ legend = ["LAT_ACCEL_FACTOR", "MAX_LAT_ACCEL_MEASURED", "FRICTION"]
+ # port extensions
+ "HONDA_CLARITY" = [0.96, 0.4018518740819229, 0.19]
+ "CHEVROLET_MALIBU_NON_ACC_9TH_GEN" = [1.85, 1.85, 0.075]
+-"GENESIS_G70_2024" = [2.7, 2.7, 0.11]
++# GENESIS_G70_2024: latAccelFactor and friction from this car's torqued estimates (4.0-4.5, 0.067-0.075) over 4 drives, 2026-10-04
++"GENESIS_G70_2024" = [4.0, 2.7, 0.07]
+-- 
+2.56.0.windows.1
+
