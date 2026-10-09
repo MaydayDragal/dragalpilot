@@ -10,6 +10,7 @@ Environment facts and standing authorizations for Claude Code sessions in this p
   - Its recorded revision is in [docs/baseline.md](docs/baseline.md).
 - The sunnypilot `dev` branch is a bot-generated prebuilt branch: vendored deps (no submodules) and committed `.so` binaries.
   - It is built from `origin/master` at the commit named in its commit message (see `docs/baseline.md`).
+- Working branch: `g70-baseline` @ `c027a92857` (local and on the device since 2026-10-09). This is the G70 2024 port with its lateral tune plus the soundd/micd audio gate. Experimental D2C4 commits are on `dragal/custom`.
 - Git commands that touch `sunnypilot/` may need `-c core.longpaths=true` per command. It is not set globally.
 
 ## 2. Host environment
