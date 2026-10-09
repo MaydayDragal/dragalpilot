@@ -1008,3 +1008,17 @@ One dated entry per session, including research-only sessions. Times are America
   - read-only device pulls.
 - `docs/local-storage.md` and the other docs are kept, since they describe the environment.
 - Committed the outstanding work from sessions 8–15: findings, proposals, session handoffs and kickoffs, and `tools/log-viewer/`.
+
+## 2026-10-09: Working baseline `g70-baseline` and calibration reset
+
+- **Dates checked (user request):** the learned-state wipe was on **2026-10-05** at 06:39 EDT, not 10/7. Route `0x17` started as `MOCK` after sunnypilot was turned off and on during startup. The last steering setup before it (the evening of 10/4 through route `0x16`) was `82f58a9a8c`.
+- **New branch `g70-baseline` @ `c027a92857`**, local in `sunnypilot/` and on the device. It is the 10/4 G70 lateral tune plus the soundd/micd audio gate (that commit touched only audio and selfdrived files). D2C4 (`268040c361`..`89bbe60ab1`) remains on `dragal/custom` only.
+- **Device** (user: online via the comma connect proxy, indoors, not in a car, no SSH sessions; permissions granted for the write and the reboot):
+  - **Connection 1** (19:46:16–20Z, `deploy/g70-baseline-reset-20261009/reset.sh`, log `logs/device-g70-baseline-reset-20261009.log`):
+    - pre-state: offroad, `89bbe60ab1` on `dragal/custom`, clean, no learners running, firmware file `206ea19c…`;
+    - backups of the learned state, calibration and CarParams (hash-verified copies in `deploy/g70-baseline-reset-20261009/backup-device-20261009T194616Z/`; they were last written 2026-10-08 ~10:52Z, from drives not pulled);
+    - `git checkout -b g70-baseline c027a92857`;
+    - the UI "Reset Calibration" equivalent: removed `CalibrationParams`, `LiveTorqueParameters`, `LiveParametersV2`, `LiveDelay`, and set `OnroadCycleRequested`;
+    - every guard passed, then reboot.
+  - **Connection 2** (read-only, 19:49Z, log `logs/device-g70-baseline-postboot-20261009.log`): `g70-baseline` @ `c027a92857`, clean, offroad, `DisableUpdates=1`, firmware unchanged, all four params absent, D2C4 code absent, audio gate present.
+  - **Effect:** the camera calibration and all learned values start from scratch. The device needs a calibration drive before it will engage. torqued uses the port tune until it becomes valid again.

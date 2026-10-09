@@ -101,6 +101,7 @@ Set up 2026-10-03 (session 2, after the VM reboot).
 
 - **Customization baseline stays `dev` @ `0b2c431d`**, because it is what is installed on the device. (Not yet confirmed from the device itself.) `origin/master` @ `a5f4465` is a reference for history and submodule commits only.
 - **Customization branch:** `dragal/custom`, created from `baseline/dev-20261003` and local only. Current head: see the changelog and the latest handoff.
+- **Working baseline (2026-10-09, user):** `g70-baseline` @ `c027a92857` (local and on the device): the G70 2024 port with the 10/4 lateral tune (`82f58a9a8c`) plus the soundd/micd audio gate. D2C4 (`268040c361`..`89bbe60ab1`) stays on `dragal/custom` only.
 - **Build environment:** install WSL 2 + Ubuntu-24.04 on this VM (the VM is dedicated to this project). The install was started 2026-10-03. See the changelog for its status.
 
 ## Device runtime notes (observed 2026-10-06, device on `c027a92857`)
