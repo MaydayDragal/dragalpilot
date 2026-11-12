@@ -1,4 +1,5 @@
 import os
+import re
 import abc
 import math
 import unittest
@@ -969,6 +970,9 @@ class SafetyTest(SafetyTestBase):
         if isinstance(tc, type) and issubclass(tc, SafetyTest) and attr != current_test:
           tx = tc.TX_MSGS
           if tx is not None and not attr.endswith('Base'):
+            # parameterized variants (<Class>_<n>) of the same class with the same TX list run the same safety mode
+            if re.sub(r"_\d+$", "", attr) == re.sub(r"_\d+$", "", current_test) and tx == self.TX_MSGS:
+              continue
             # No point in comparing different Tesla safety modes
             if 'Tesla' in attr and 'Tesla' in current_test:
               continue
