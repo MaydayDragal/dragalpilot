@@ -96,6 +96,7 @@ Set up 2026-10-03 (session 2, after the VM reboot).
 | Date | Change | Old → New | Reason | Validation |
 |---|---|---|---|---|
 | 2026-10-03 | Initial baseline | — → `0b2c431d` | Project start (kickoff: latest `dev`) | Remote/branch/SHA/status verified as above |
+| 2026-11-12 | Move to current upstream `dev` | `0b2c431d` → `d3e1a2f` (v2026.11.12-5016, master `066c0e295712`, AGNOS 19.9) | User request: latest sunnypilot with the G70 port only | Static checks only; device post-boot check and two drives, see [findings](findings/2026-11-12-g70-fingerprint-update-drives.md) |
 
 ## Decisions (2026-10-03, user)
 

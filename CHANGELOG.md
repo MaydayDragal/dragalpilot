@@ -1026,3 +1026,16 @@ One dated entry per session, including research-only sessions. Times are America
   - branches `sunnypilot/g70-baseline` (`c027a92857`) and `sunnypilot/dragal-custom` (`89bbe60ab1`), plus tag `sunnypilot-baseline/dev-20261003` (`0b2c431d`), pushed from `sunnypilot/` through a new remote `dragal`;
   - readable patches in `sunnypilot-patches/` on `main`;
   - the local `sunnypilot/` checkout is now on `g70-baseline`.
+
+## 2026-11-12: Move to sunnypilot `dev` 2026-11-12 with the G70 port only, device update, two drives
+
+Details: [docs/findings/2026-11-12-g70-fingerprint-update-drives.md](docs/findings/2026-11-12-g70-fingerprint-update-drives.md). Done from a different PC (no WSL, no `E:` data root).
+
+- **New branch `sunnypilot/g70-fingerprint`** (pushed): upstream `dev` @ `d3e1a2f` (v2026.11.12-5016, master `066c0e295712`) + `be9fe0d` (G70 2024 car port only) + `c4776c4` (`0x484` camera-SCC block, tests, rebuilt `panda_h7` firmware). User request: drop every modification except the car fingerprint, then keep the grasp-warning fix. The audio gate and D2C4 are not carried over.
+- Port fix: upstream removed `CarSpecs.mass`; the October patch as-is would break every car's import.
+- Firmware: built on Windows with Arm GNU 13.2.Rel1 and the pinned panda `8a16e089b885` flags. The unchanged build reproduces the shipped `panda_h7.bin.signed` byte-for-byte; the modified one (sha256 `529f9e2c…`) differs only in `HYUNDAI_CAMERA_SCC_TX_MSGS` (adds `0x484`).
+- **No opendbc car or safety tests were run** on the new commits (static checks only).
+- **Device (comma four), user-authorized:** installed `c4776c4` from a git bundle as local branch `g70-fingerprint` (13:52Z), AGNOS 19.7 → 19.9, panda recovered from DFU and flashed; post-boot signature `7f1a57d0bb075216` matches. `DisableUpdates` was 0 and the failing update check was blocking onroad; set to 1 (user-approved, 14:04Z). Rollback branch `g70-baseline` @ `c027a92857` stays on the device.
+- **Two drives reviewed** (routes `000000a3`–`a6`): fingerprint exact, no steering faults, EPS follows the command. The device ran a custom torque override 5.0 / 0.04 while torqued's raw estimate was ~4.0 / 0.07. Bookmarked turn (~76 mph): turn-in short by up to 0.5 m/s², ~0.45 m wide, then overshoot; torque 41 %. One genuine `steerSaturated` at 43 mph (3.1 m/s² demanded, limit 2.7). Lateral Jerk Torque Controller (143 s): no measurable difference.
+- **Device setting changed after the drives (user-approved):** torque override 5.0 / 0.04 → 4.0 / 0.07. Not yet driven.
+- Open: `faultTemp` panda status and `safetyTxBlocked` ≤ 4 during the drives; grasp warning not checked; tests not run.

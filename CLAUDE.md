@@ -10,7 +10,8 @@ Environment facts and standing authorizations for Claude Code sessions in this p
   - Its recorded revision is in [docs/baseline.md](docs/baseline.md).
 - The sunnypilot `dev` branch is a bot-generated prebuilt branch: vendored deps (no submodules) and committed `.so` binaries.
   - It is built from `origin/master` at the commit named in its commit message (see `docs/baseline.md`).
-- Working branch: `g70-baseline` @ `c027a92857` (local and on the device since 2026-10-09; pushed to this repo as branch `sunnypilot/g70-baseline`, D2C4 as `sunnypilot/dragal-custom`, base tag `sunnypilot-baseline/dev-20261003`; readable patches in `sunnypilot-patches/`). This is the G70 2024 port with its lateral tune plus the soundd/micd audio gate. Experimental D2C4 commits are on `dragal/custom`.
+- **Current (2026-11-12):** `g70-fingerprint` @ `c4776c4` on the device (branch `sunnypilot/g70-fingerprint` in this repo): upstream `dev` @ `d3e1a2f` + the G70 2024 port + the `0x484` fix with rebuilt panda firmware. `DisableUpdates=1`. See [docs/findings/2026-11-12-g70-fingerprint-update-drives.md](docs/findings/2026-11-12-g70-fingerprint-update-drives.md). The host, WSL and storage sections below describe the October VM, not the PC used on 2026-11-12.
+- Previous working branch: `g70-baseline` @ `c027a92857` (on the device 2026-10-09 to 2026-11-12, kept there for rollback; pushed to this repo as branch `sunnypilot/g70-baseline`, D2C4 as `sunnypilot/dragal-custom`, base tag `sunnypilot-baseline/dev-20261003`; readable patches in `sunnypilot-patches/`). This is the G70 2024 port with its lateral tune plus the soundd/micd audio gate. Experimental D2C4 commits are on `dragal/custom`.
 - Git commands that touch `sunnypilot/` may need `-c core.longpaths=true` per command. It is not set globally.
 
 ## 2. Host environment

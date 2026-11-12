@@ -20,3 +20,7 @@ git checkout -b g70-baseline FETCH_HEAD
 ```
 
 Or apply the patches to the base commit: `git am g70-baseline/*.patch`.
+
+## 2026-11-12: `sunnypilot/g70-fingerprint`
+
+Current branch on the device: upstream `dev` @ `d3e1a2f` + `be9fe0d` (car port only) + `c4776c4` (`0x484` fix with rebuilt panda firmware). The patches above are the October history and do not apply as-is to the new base (`CarSpecs.mass` was removed upstream). See `docs/findings/2026-11-12-g70-fingerprint-update-drives.md`.
