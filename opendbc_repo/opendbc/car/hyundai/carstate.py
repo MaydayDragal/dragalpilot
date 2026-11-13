@@ -65,6 +65,10 @@ class CarState(CarStateBase, EsccCarStateBase, MadsCarState, CarStateExt):
 
     self.cruise_info = {}
 
+    # camera LKAS12, re-sent by the car controller with the DAW warning removed (G70 2024)
+    self.lkas12 = {}
+    self.lkas12_ts_nanos = 0
+
     # On some cars, CLU15->CF_Clu_VehicleSpeed can oscillate faster than the dash updates. Sample at 5 Hz
     self.cluster_speed = 0
     self.cluster_speed_counter = CLUSTER_SAMPLE_RATE
@@ -187,6 +191,9 @@ class CarState(CarStateBase, EsccCarStateBase, MadsCarState, CarStateExt):
     # save the entire LKAS11 and CLU11
     self.lkas11 = copy.copy(cp_cam.vl["LKAS11"])
     self.clu11 = copy.copy(cp.vl["CLU11"])
+    if self.CP.carFingerprint == CAR.GENESIS_G70_2024:
+      self.lkas12 = copy.copy(cp_cam.vl["LKAS12"])
+      self.lkas12_ts_nanos = cp_cam.ts_nanos["LKAS12"]["CF_LkasDawStatus"]
     self.steer_state = cp.vl["MDPS12"]["CF_Mdps_ToiActive"]  # 0 NOT ACTIVE, 1 ACTIVE
     prev_cruise_buttons = self.cruise_buttons[-1]
     prev_main_buttons = self.main_buttons[-1]

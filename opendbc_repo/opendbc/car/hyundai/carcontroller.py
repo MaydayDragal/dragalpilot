@@ -75,8 +75,11 @@ class CarController(CarControllerBase, CcncCarController, EsccCarController, Lea
     self.car_fingerprint = CP.carFingerprint
     self.last_button_frame = 0
     self.cancel_counter = 0
+    self.lkas12_daw_level = 5  # last normal DAW attention level seen from the camera
+    self.now_nanos = 0
 
   def update(self, CC, CC_SP, CS, now_nanos):
+    self.now_nanos = now_nanos
     EsccCarController.update(self, CS)
     LeadDataCarController.update(self, CC_SP)
     MadsCarController.update(self, self.CP, CC, CC_SP, self.frame)
@@ -187,6 +190,13 @@ class CarController(CarControllerBase, CcncCarController, EsccCarController, Lea
     # 20 Hz LFA MFA message
     if self.frame % 5 == 0 and self.CP.flags & HyundaiFlags.SEND_LFA.value:
       can_sends.append(hyundaican.create_lfahda_mfc(self.packer, CC.enabled, self.lfa_icon))
+
+    # 10 Hz LKAS12: the panda blocks the camera's copy (camera SCC, stock longitudinal), so re-send it with the
+    # Driver Attention Warning removed. Stop when the camera's own message is older than 0.5 s.
+    if self.car_fingerprint == CAR.GENESIS_G70_2024 and not self.CP.openpilotLongitudinalControl and CS.lkas12_ts_nanos > 0:
+      lkas12, self.lkas12_daw_level = hyundaican.lkas12_daw_filter(CS.lkas12, self.lkas12_daw_level)
+      if self.frame % 10 == 0 and (self.now_nanos - CS.lkas12_ts_nanos) < 0.5e9:
+        can_sends.append(hyundaican.create_lkas12(self.packer, lkas12))
 
     # 5 Hz ACC options
     if self.frame % 20 == 0 and self.CP.openpilotLongitudinalControl:

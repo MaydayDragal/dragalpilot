@@ -997,7 +997,14 @@ BO_ 832 LKAS11: 8 LDWS_LKAS
  SG_ CF_Lkas_LdwsOpt_USM : 59|3@1+ (1.0,0.0) [0.0|7.0] ""  CLU,MDPS
  SG_ CF_Lkas_Unknown2 : 62|2@1+ (1.0,0.0) [0.0|1.0] "" XXX
 
-BO_ 1342 LKAS12: 6 LDWS_LKAS
+BO_ 1342 LKAS12: 8 LDWS_LKAS
+ SG_ CF_Lkas12_Raw0 : 0|8@1+ (1,0) [0|255] "" XXX
+ SG_ CF_Lkas12_Raw1 : 8|2@1+ (1,0) [0|3] "" XXX
+ SG_ CF_Lkas12_Raw2 : 14|2@1+ (1,0) [0|3] "" XXX
+ SG_ CF_Lkas12_Raw3 : 34|3@1+ (1,0) [0|7] "" XXX
+ SG_ CF_Lkas12_DawWarning : 43|5@1+ (1,0) [0|31] "" XXX
+ SG_ CF_Lkas12_Raw6 : 48|8@1+ (1,0) [0|255] "" XXX
+ SG_ CF_Lkas12_Raw7 : 56|8@1+ (1,0) [0|255] "" XXX
  SG_ CF_Lkas_TsrSlifOpt : 10|2@1+ (1.0,0.0) [0.0|3.0] ""  CLU
  SG_ CF_LkasTsrStatus : 12|2@1+ (1.0,0.0) [0.0|3.0] ""  CLU
  SG_ CF_Lkas_TsrSpeed_Display_Clu : 16|8@1+ (1.0,0.0) [0.0|255.0] ""  CLU

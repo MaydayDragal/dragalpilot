@@ -132,6 +132,27 @@ def create_lfahda_mfc(packer, enabled, lfa_icon):
   return packer.make_can_msg("LFAHDA_MFC", 0, values)
 
 
+# LKAS12 (0x53E, camera, 10 Hz, 8 bytes, no counter or checksum) carries the Driver Attention Warning status.
+# On the 2024 G70 the status counts 5..1 and reads 6, with bit 44 set, while the cluster shows "consider taking a break".
+LKAS12_DAW_WARNING = 6
+
+
+def lkas12_daw_filter(lkas12: dict, last_level: int) -> tuple[dict, int]:
+  """Returns the camera's LKAS12 values with the DAW warning replaced by the last normal attention level."""
+  values = dict(lkas12)
+  status = int(values["CF_LkasDawStatus"])
+  if status == LKAS12_DAW_WARNING or int(values["CF_Lkas12_DawWarning"]) != 0:
+    values["CF_LkasDawStatus"] = last_level
+    values["CF_Lkas12_DawWarning"] = 0
+  else:
+    last_level = status
+  return values, last_level
+
+
+def create_lkas12(packer, values):
+  return packer.make_can_msg("LKAS12", 0, values)
+
+
 def create_acc_commands(packer, enabled, accel, upper_jerk, idx, lead_data: CanLeadData,
                         hud_control, set_speed, stopping, long_override, use_fca, CP,
                         main_cruise_enabled, tuning, ESCC: EnhancedSmartCruiseControl | None = None):
