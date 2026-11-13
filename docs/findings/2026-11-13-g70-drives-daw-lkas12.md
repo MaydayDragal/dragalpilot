@@ -1,6 +1,6 @@
 # G70 2024: three more drives, October findings review, and the "take a break" warning (2026-11-13)
 
-**Status:** `g70-fingerprint` @ `4525e88` is on the device (installed 2026-11-13 12:24Z). The Driver Attention Warning fix is **not yet confirmed in the car**.
+**Status:** `g70-fingerprint` @ `4525e88` is on the device (installed 2026-11-13 12:24Z). The LKAS12 re-send works (§8), but the camera has not raised the warning since, so the Driver Attention Warning block is **not yet confirmed**. Device steering settings: Lateral Jerk on, Enforce on, override 4.8 / 0.07 (not yet driven).
 
 Follows [2026-11-12-g70-fingerprint-update-drives.md](2026-11-12-g70-fingerprint-update-drives.md). Device identifiers, addresses and GPS are kept out of this repo.
 
@@ -124,8 +124,58 @@ One event. The meaning of levels 1–5 and of bit 44 is inferred from this seque
 - After the restart (uptime 637 s): `4525e88`, clean, offroad, `DisableUpdates=1`, no offroad alerts, pandad log "Done flashing" with no mismatch and `./pandad` running since boot. The signature line for this boot was not captured.
 - Settings left by the user: override 4.0 / 0.07, `EnforceTorqueControl=0`, `LateralJerkTorqueController=1`.
 
-## 7. Open
+## 7. Straight-road sway ("ping-pong"), all drives (observations)
 
+**Method.** Straight = 5 s moving mean of desired lateral accel within ±0.35 m/s²; hands off, lat active, no blinker, both lane-line probabilities > 0.5, > 60 mph. Hann windows of 20.48 s, 50 % overlap; averaged auto- and cross-spectra. Lane = mean of lane lines 1 and 2 at their first point. Gain and lag are desired → actual lateral accel. There were no usable straight windows at 35–60 mph in any drive.
+
+| Config | Routes | Straight s | Lane RMS 0.2–0.3 / 0.3–0.45 Hz (cm) | act/des gain 0.3–0.45 / 0.45–0.7 Hz | Lag 0.2–0.3 / 0.3–0.45 Hz | Wheel 0.45–0.7 Hz (°) |
+|---|---|---|---|---|---|---|
+| 5.0 / 0.04, Enforce 1 | a3, a5, a6 | 307 | 1.62 / 1.48 | 1.09 / 0.92 | 59° / 78° | 0.067 |
+| 4.0 / 0.07, Enforce 1 | a7 | 113 | 1.35 / 1.40 | 1.03 / 1.12 | 51° / 67° | 0.113 |
+| 4.0 / 0.07, Enforce 1, Jerk 1 | aa | 133 | 1.13 / 0.80 | 1.05 / 1.63 | 16° / 38° | 0.157 |
+| Enforce 0, Jerk 1 | ab | 51 | 0.91 / 0.77 | 1.17 / 1.67 | 20° / 47° | 0.133 |
+| 4.5 / 0.07, Enforce 1, Jerk 1 | ac | 82 | 0.85 / 0.73 | 1.23 / 1.18 | 50° / 62° | 0.094 |
+
+- The lane offset moves about 1.5–2 cm RMS per band at 0.1–0.45 Hz on the first setup; the largest lane-offset bin is at 0.15 Hz, the actual-lateral-accel peak at 0.39–0.63 Hz.
+- The model asks for about 1.9–2.6 m/s² per metre of lane offset at 0.3–0.7 Hz (coherence 0.5–0.8).
+- With the standard controller the car delivers the request (gain ≈ 1) 60–80° late at 0.3–0.45 Hz.
+- With `LateralJerkTorqueController=1` the lag at 0.2–0.45 Hz was 16–47° on `aa`/`ab` and the lane motion in those bands about 40 % lower, with gain 1.5–1.7 and more wheel motion at 0.45–1 Hz.
+- With the factor raised to 4.5 (`ac`) the 0.45–1 Hz gain fell to 1.18 / 0.85 and wheel motion to 0.094°, lane motion was the lowest in every band, but the lag at 0.2–0.45 Hz read 50–62° again.
+
+**Source fact (`4525e88`):** the jerk-aware extension is selected by `LateralJerkTorqueController` alone (`latcontrol_torque_jerk_aware.py`); the override values are applied only when `EnforceTorqueControl` is set (`latcontrol_torque_ext_override.py`). So `ab` was a jerk-on drive on torqued's published values (4.0 / 0.07 filtered, raw 3.76), not on the override.
+
+**Hypothesis:** the sway is the model's lane-position correction acting through a steering response that is about half a second late; reducing that lag reduces the sway, and a higher factor trims the over-delivery the jerk controller adds at 0.45–1 Hz.
+
+**Limits:** 51–133 s of straight road per new configuration, different roads and days; the lag difference between `aa` and `ac` is not resolved.
+
+## 8. Drive `000000ac` (2026-11-13 17:17Z, 1871 s): 4.5 / 0.07, Enforce 1, Jerk 1, on `4525e88`
+
+| Band | s | RMS error (m/s²) | angle 0.7–4 Hz (°) | lane centre 0.2–0.7 Hz (m) | torque rate RMS (1/s) |
+|---|---|---|---|---|---|
+| > 60 mph | 246 | 0.051 | 0.088 | 0.021 | 0.51 |
+| 35–60 mph | 435 | 0.074 | 0.193 | 0.061 | 0.60 |
+
+- Curve events (10, median peak 1.88 m/s²): shortfall / peak 0.13, overshoot 0.28 m/s², peak torque 0.45.
+- torqued reached `calPerc` 100; raw 3.60–3.74 / 0.072–0.073.
+- No steering faults. `espDisabled` at 776–777 s (no alert text logged), `stockFcw` at 1615–1616 s, `controlsMismatch` at 2 s, `faultTemp` panda status, `safetyTxBlocked` up to 3.
+
+**LKAS12 re-send (first drive on the fix):**
+- `sendcan` 18,691 frames on bus 0, echoed 18,690 (`src 128`), 1 rejected (`src 192`) in the first segment; camera 18,754 on bus 2.
+- Gap of the re-sent stream: mean 100 ms, max 101–113 ms per segment.
+- The re-sent payload differed from the camera's latest in 3 of 18,690 frames (at payload changes).
+- Camera `CF_LkasDawStatus`: 5 → 4 (402.7 s) → 3 (534.3 s) → 4 (654.4 s) → 5 (793.5 s). **The warning value never occurred, so the block itself is untested.**
+- Whether the cluster still shows the speed-limit sign: not yet reported by the user.
+
+## 9. Settings changed on the device (user-approved, offroad, read back)
+
+| When | Change |
+|---|---|
+| 2026-11-13, before `ac` | `TorqueParamsOverrideLatAccelFactor` 4.0 → 4.5, `EnforceTorqueControl` 0 → 1 (Jerk already 1, friction 0.07) |
+| 2026-11-13, after `ac` | `TorqueParamsOverrideLatAccelFactor` 4.5 → **4.8**. Not yet driven. If curve turn-in gets worse, return to 4.5 |
+
+## 10. Open
+
+- A drive on 4.8 with at least 10 min of straight highway above 60 mph.
 - Confirm the DAW fix on a long drive; check the speed-limit sign and for new cluster warnings.
 - `espDisabled` events; `faultTemp` panda status.
 - Controller in use with Enforce 0; a same-road comparison of the three configurations.

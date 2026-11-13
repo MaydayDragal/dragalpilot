@@ -1050,3 +1050,14 @@ Details: [docs/findings/2026-11-13-g70-drives-daw-lkas12.md](docs/findings/2026-
 - **Fix `4525e88`** on `sunnypilot/g70-fingerprint` (pushed): the panda blocks forwarding of `0x53E` (`check_relay` TX entry, firmware rebuilt, sha256 `f99ab974…`); sunnypilot re-sends the camera's LKAS12 with the warning replaced by the last normal level; LKAS12 DBC extended to 8 bytes. G70 2024 only. Offline: all 51 logged payloads round-trip exactly and only the warning payload is altered. **Tests not run; not yet confirmed in the car.**
 - **Device (user-authorized):** installed `4525e88` at 12:24Z from a bundle, rollback branch `g70-fingerprint-prev` → `c4776c4`, reboot; afterwards clean, no alerts, panda flashed.
 - Open: confirm the DAW fix and the speed-limit sign on a long drive; `espDisabled` alerts in `a6`/`a7`; `faultTemp` panda status; controller in use with Enforce 0.
+
+## 2026-11-13 (later): Straight-road sway analysis, drive on jerk control with factor 4.5, factor set to 4.8
+
+Details: [docs/findings/2026-11-13-g70-drives-daw-lkas12.md](docs/findings/2026-11-13-g70-drives-daw-lkas12.md) §7–§10.
+
+- **Straight-road sway measured** (> 60 mph, all drives): 1.5–2 cm RMS per band at 0.1–0.45 Hz; the model asks about 2 m/s² per metre of lane offset and the standard controller answers 60–80° late at 0.3–0.45 Hz. With `LateralJerkTorqueController=1` the lag was 16–47° and the lane motion about 40 % lower, with over-delivery (gain 1.5–1.7) at 0.45–1 Hz. Small samples (51–133 s per new configuration).
+- Source fact: the jerk extension is selected by its own param; the override values apply only with `EnforceTorqueControl=1`.
+- **Drive `000000ac`** (4.5 / 0.07, Enforce 1, Jerk 1): RMS error 0.051 m/s² above 60 mph and 0.074 at 35–60 mph, curve shortfall 13 %, lowest lane motion so far, 0.45–1 Hz gain down to 1.18 / 0.85.
+- **LKAS12 re-send confirmed working** on `4525e88`: 18,690 frames at 10 Hz, 3 differing from the camera's latest. The camera's status only reached 3, so the warning block is still untested.
+- **Device settings (user-approved):** factor 4.0 → 4.5 and Enforce on before `ac`; factor 4.5 → 4.8 after it (not yet driven).
+- Also seen in `ac`: `stockFcw` once, `espDisabled` once, `faultTemp` panda status.
