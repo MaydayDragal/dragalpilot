@@ -19,7 +19,7 @@ Logs, videos, datasets, analysis outputs and caches are **never** stored in this
 
 ## Status
 
-- **2026-11-12:** the device runs `g70-fingerprint` @ `c4776c4` (branch `sunnypilot/g70-fingerprint`): upstream `dev` @ `d3e1a2f` + the G70 2024 port + the `0x484` fix, AGNOS 19.9, `DisableUpdates=1`. See [docs/findings/2026-11-12-g70-fingerprint-update-drives.md](docs/findings/2026-11-12-g70-fingerprint-update-drives.md). The entries below are the October history.
+- **2026-11-13:** the device runs `g70-fingerprint` @ `4525e88` (branch `sunnypilot/g70-fingerprint`): upstream `dev` @ `d3e1a2f` + the G70 2024 port + the `0x484` fix + the Driver Attention Warning ("take a break") fix that re-sends the camera's LKAS12, AGNOS 19.9, `DisableUpdates=1`. The DAW fix is not yet confirmed in the car. See [docs/findings/2026-11-13-g70-drives-daw-lkas12.md](docs/findings/2026-11-13-g70-drives-daw-lkas12.md) and [docs/findings/2026-11-12-g70-fingerprint-update-drives.md](docs/findings/2026-11-12-g70-fingerprint-update-drives.md). The entries below are the October history.
 - Baseline: `dev` @ `0b2c431d3abab630df0a32f53236944855a91aa3` (tag `baseline/dev-20261003`), built from master `a5f44653d7f4`.
 - Customization branch `dragal/custom` (local): WIP G70 2024 platform port @ `7e9d0755d9` (focused review done, see docs/findings). Targeted opendbc tests pass and the car's real FW resolves to `GENESIS_G70_2024`. Parked-car rlogs confirm CRC8 checksums and clean CarState and safety rx parsing. First-drive logs support `CAMERA_SCC`. Low-speed behaviour and tune quality are unvalidated. Focused review done (no two-round QA).
 - Test environment: WSL 2 + Ubuntu 24.04 (distro disk on the data root). See [docs/baseline.md](docs/baseline.md#wsl-test-environment).

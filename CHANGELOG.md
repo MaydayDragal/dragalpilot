@@ -1039,3 +1039,14 @@ Details: [docs/findings/2026-11-12-g70-fingerprint-update-drives.md](docs/findin
 - **Two drives reviewed** (routes `000000a3`–`a6`): fingerprint exact, no steering faults, EPS follows the command. The device ran a custom torque override 5.0 / 0.04 while torqued's raw estimate was ~4.0 / 0.07. Bookmarked turn (~76 mph): turn-in short by up to 0.5 m/s², ~0.45 m wide, then overshoot; torque 41 %. One genuine `steerSaturated` at 43 mph (3.1 m/s² demanded, limit 2.7). Lateral Jerk Torque Controller (143 s): no measurable difference.
 - **Device setting changed after the drives (user-approved):** torque override 5.0 / 0.04 → 4.0 / 0.07. Not yet driven.
 - Open: `faultTemp` panda status and `safetyTxBlocked` ≤ 4 during the drives; grasp warning not checked; tests not run.
+
+## 2026-11-13: Three more drives, October findings review, Driver Attention Warning fix
+
+Details: [docs/findings/2026-11-13-g70-drives-daw-lkas12.md](docs/findings/2026-11-13-g70-drives-daw-lkas12.md).
+
+- **Drives reviewed** (routes `000000a7`, `aa`, `ab`): override 4.0 / 0.07 tracks slightly better than 5.0 / 0.04 (RMS error > 60 mph 0.067 vs 0.071–0.088 m/s², curve overshoot 0.27 vs 0.31–0.34) with a faster torque command at 35–60 mph; the Lateral Jerk controller tracks the same and moves the wheel more; `EnforceTorqueControl=0` was best (0.058, overshoot 0.18). Different roads and short routes: leads, not an A/B. None passes the turn bookmarked on 11-12.
+- **October findings read against the current setup:** October ran `LatControlTorqueV0` without Enforce or override, so its baselines are not comparable; the removed audio gate guarded a 5-of-21 cold-start crash (none reported so far); `0x484` remains unproven; no tuning fix for the weave was found.
+- **"Take a break" identified:** camera LKAS12 (`0x53E`, bus 2, 10 Hz, 8 bytes) `CF_LkasDawStatus` counts 5..1, then reads 6 with bit 44 set for 4.0 s ending at the user's bookmark (`a7`, 1107.2–1111.2 s). 40 of 50,208 frames. The car has no menu switch for it.
+- **Fix `4525e88`** on `sunnypilot/g70-fingerprint` (pushed): the panda blocks forwarding of `0x53E` (`check_relay` TX entry, firmware rebuilt, sha256 `f99ab974…`); sunnypilot re-sends the camera's LKAS12 with the warning replaced by the last normal level; LKAS12 DBC extended to 8 bytes. G70 2024 only. Offline: all 51 logged payloads round-trip exactly and only the warning payload is altered. **Tests not run; not yet confirmed in the car.**
+- **Device (user-authorized):** installed `4525e88` at 12:24Z from a bundle, rollback branch `g70-fingerprint-prev` → `c4776c4`, reboot; afterwards clean, no alerts, panda flashed.
+- Open: confirm the DAW fix and the speed-limit sign on a long drive; `espDisabled` alerts in `a6`/`a7`; `faultTemp` panda status; controller in use with Enforce 0.
