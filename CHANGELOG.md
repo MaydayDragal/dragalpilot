@@ -1061,3 +1061,15 @@ Details: [docs/findings/2026-11-13-g70-drives-daw-lkas12.md](docs/findings/2026-
 - **LKAS12 re-send confirmed working** on `4525e88`: 18,690 frames at 10 Hz, 3 differing from the camera's latest. The camera's status only reached 3, so the warning block is still untested.
 - **Device settings (user-approved):** factor 4.0 → 4.5 and Enforce on before `ac`; factor 4.5 → 4.8 after it (not yet driven).
 - Also seen in `ac`: `stockFcw` once, `espDisabled` once, `faultTemp` panda status.
+
+## 2026-11-16: Six drives on factor 4.8, loop model of the straight-road sway, steering-delay offset
+
+Details: [docs/findings/2026-11-16-g70-straight-sway-loop-model.md](docs/findings/2026-11-16-g70-straight-sway-loop-model.md).
+
+- **Drives `ad`–`b4`** (Jerk on, 4.8 / 0.07): with 532 s of straight road above 60 mph the jerk controller holds about 30 % less lane motion at 0.2–0.45 Hz than the first setup, with about twice the wheel motion at 0.45–0.7 Hz. 4.8 gave nothing over 4.5 and was slightly weaker in curves.
+- **Source fact:** on a straight the friction setting is the largest feedback gain (slope `friction / 0.2`); the override factor does not change it.
+- **Loop model** (`tools/drive-eval/loopfit.py`): plant identified from 114 windows; fitted to five configurations it needs 0.15 s of extra delay. No torque-parameter setting lowers both lag and torque activity.
+- **Change `dbc2916`** (pushed, installed 12:17Z, user-authorized): lagd adds an optional offset from `/data/g70_lat_delay_offset` to the published steering delay. Python only.
+- **Device settings:** override 4.8 / 0.07 → 4.5 / 0.05, delay offset 0.12 s. Not yet driven.
+- **Tools** added under `tools/drive-eval/`.
+- LKAS12: re-send fine, warning still not triggered; the filter also cleared camera start-up bit 43 in `b4` and should be narrowed. `espDisabled` blips in five drives, one causing a "TAKE CONTROL" alert.
