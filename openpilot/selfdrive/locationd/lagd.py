@@ -15,6 +15,7 @@ from openpilot.common.realtime import config_realtime_process
 from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.locationd.helpers import PoseCalibrator, Pose, fft_next_good_size, parabolic_peak_interp
 from openpilot.sunnypilot.livedelay.lagd_toggle import LagdToggle
+from openpilot.sunnypilot.livedelay.helpers import read_lat_delay_offset
 
 BLOCK_SIZE = 100
 BLOCK_NUM = 50
@@ -402,6 +403,7 @@ def main():
     lag_learner.reset(lag, valid_blocks)
 
   lagd_toggle = LagdToggle(CP)
+  lat_delay_offset = read_lat_delay_offset()  # dragalpilot: 0.0 unless /data/g70_lat_delay_offset exists
 
   while True:
     sm.update()
@@ -416,11 +418,17 @@ def main():
     if sm.frame % 5 == 0:
       lag_learner.update_estimate()
       lag_msg = lag_learner.get_msg(sm.all_checks(), DEBUG)
-      lag_msg_dat = lag_msg.to_bytes()
-      pm.send('lateralDelay', lag_msg_dat)
+      lag_msg_dat = lag_msg.to_bytes()  # the learner's own estimate; this is what gets cached
 
       if sm.frame % 1200 == 0: # cache every 60 seconds
         params.put("LiveDelay", lag_msg_dat)
+
+      # publish with the optional offset (lateralDelayEstimate stays the raw estimate)
+      if lat_delay_offset > 0.0:
+        lag_msg.lateralDelay.lateralDelay = lag_msg.lateralDelay.lateralDelay + lat_delay_offset
+        pm.send('lateralDelay', lag_msg.to_bytes())
+      else:
+        pm.send('lateralDelay', lag_msg_dat)
 
       if sm.frame % 60 == 0:  # read from and write to params every 3 seconds
         lagd_toggle.update(lag_msg)
