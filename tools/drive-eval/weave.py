@@ -3,7 +3,7 @@ sys.path.insert(0, sys.argv[1]); from lib import load
 R = {}
 for D in sys.argv[2:]: R.update(load(D))
 CFG = {"000000a3":"5.0/.04 enf", "000000a4":"5.0/.04 enf+jerk", "000000a5":"5.0/.04 enf", "000000a6":"5.0/.04 enf", "000000a7":"4.0/.07 enf", "000000aa":"4.0/.07 enf+jerk", "000000ab":"enforce OFF"}
-GROUPS = {"5.0/.04 enf": ["000000a3","000000a5","000000a6"], "4.0/.07 enf": ["000000a7"], "4.0/.07 enf+jerk": ["000000aa"], "enforce OFF": ["000000ab"], "4.5/.07 enf+jerk": ["000000ac"], "4.8/.07 enf+jerk": ["000000ad","000000ae","000000af","000000b0","000000b1","000000b4"]}
+GROUPS = {"5.0/.04 enf": ["000000a3","000000a5","000000a6"], "4.0/.07 enf": ["000000a7"], "4.0/.07 enf+jerk": ["000000aa"], "enforce OFF": ["000000ab"], "4.5/.07 enf+jerk": ["000000ac"], "4.8/.07 enf+jerk": ["000000ad","000000ae","000000af","000000b0","000000b1","000000b4"], "4.5/.05 jerk+0.12s": ["000000b5"]}
 N = 2048  # 20.48 s windows, 0.049 Hz resolution
 def runs(m, minlen):
     idx = np.flatnonzero(np.diff(np.r_[0, m.astype(int), 0])); return [(a, b) for a, b in zip(idx[::2], idx[1::2]) if b - a >= minlen]

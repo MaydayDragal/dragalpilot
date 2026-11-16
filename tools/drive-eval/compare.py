@@ -7,7 +7,7 @@ for D in sys.argv[2:]:
         r, n = re.match(r"(.*)--(\d+)\.pkl", os.path.basename(f)).groups()
         p = pickle.load(open(f, "rb"))
         if len(p["gps"]): G.setdefault(r[:8], []).append((int(n), p["gps"], p["cs"][0,0] if len(p["cs"]) else None))
-CFG = {"000000a3":"5.0/.04 enf", "000000a4":"5.0/.04 enf+jerk", "000000a5":"5.0/.04 enf", "000000a6":"5.0/.04 enf", "000000a7":"4.0/.07 enf", "000000aa":"4.0/.07 enf+jerk", "000000ab":"4.0/.07 enf OFF", "000000ac":"4.5/.07 enf+jerk", "000000ad":"4.8/.07 enf+jerk", "000000ae":"4.8/.07 enf+jerk", "000000af":"4.8/.07 enf+jerk", "000000b0":"4.8/.07 enf+jerk", "000000b1":"4.8/.07 enf+jerk", "000000b4":"4.8/.07 enf+jerk"}
+CFG = {"000000a3":"5.0/.04 enf", "000000a4":"5.0/.04 enf+jerk", "000000a5":"5.0/.04 enf", "000000a6":"5.0/.04 enf", "000000a7":"4.0/.07 enf", "000000aa":"4.0/.07 enf+jerk", "000000ab":"4.0/.07 enf OFF", "000000ac":"4.5/.07 enf+jerk", "000000ad":"4.8/.07 enf+jerk", "000000ae":"4.8/.07 enf+jerk", "000000af":"4.8/.07 enf+jerk", "000000b0":"4.8/.07 enf+jerk", "000000b1":"4.8/.07 enf+jerk", "000000b4":"4.8/.07 enf+jerk", "000000b5":"4.5/.05 jerk+0.12s"}
 def runs(m, minlen):
     idx = np.flatnonzero(np.diff(np.r_[0, m.astype(int), 0])); return [(a, b) for a, b in zip(idx[::2], idx[1::2]) if b - a >= minlen]
 def band(x, lo, hi):

@@ -43,3 +43,12 @@ Copy the `.pkl` files to the PC and delete `/data/tmp/ext` afterwards. A route i
 
 - The loop model is linear and small-signal. It reproduces measured gains to roughly ±0.2 and, after fitting one extra delay (0.15 s), the lag to roughly ±10°. It under-predicts the jerk-aware controller's gain at 0.45–1 Hz. Use it to rank directions, not to predict numbers.
 - Comparisons between drives are on different roads and days unless stated.
+
+## Added 2026-11-16
+
+| Script | Where | What it does |
+|---|---|---|
+| `speedlimit_nav_vs_camera.py <route> ...` | comma | seconds by (nav limit from `0x544`, camera LKAS12 fields, re-sent sign) |
+| `speedlimit_sources.py <route>` | comma | sunnypilot map source validity and a sample of the speed-limit resolver |
+| `hda11_vs_nav.py <route> ...` | comma | camera `0x484` payloads against the nav limit and LKAS12 sign |
+| `esp_events.py <scripts dir> <dir> ...` | PC | when `espDisabled` events occur (speed, lat active) |
