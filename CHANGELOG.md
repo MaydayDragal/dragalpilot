@@ -1073,3 +1073,11 @@ Details: [docs/findings/2026-11-16-g70-straight-sway-loop-model.md](docs/finding
 - **Device settings:** override 4.8 / 0.07 → 4.5 / 0.05, delay offset 0.12 s. Not yet driven.
 - **Tools** added under `tools/drive-eval/`.
 - LKAS12: re-send fine, warning still not triggered; the filter also cleared camera start-up bit 43 in `b4` and should be narrowed. `espDisabled` blips in five drives, one causing a "TAKE CONTROL" alert.
+
+## 2026-11-16 (later): Narrower attention-warning filter, stability-control blips explained
+
+Details: [docs/findings/2026-11-16-g70-straight-sway-loop-model.md](docs/findings/2026-11-16-g70-straight-sway-loop-model.md) §7 and §9.
+
+- **`9954fdf`** on `sunnypilot/g70-fingerprint` (pushed, installed 12:24Z): the LKAS12 filter now replaces only status 6 and clears only bit 44; camera start-up bit 43 passes through. Offline check on all logged payloads and synthetic cases. Not driven.
+- **`espDisabled` blips:** the user confirms they come from switching the car's drive modes and are normal. A switch while engaged raises the "Electronic Stability Control Disabled" alert (`a7`, `ae`). No change made.
+- Device: `9954fdf`, settings unchanged (Lateral Jerk on, override 4.5 / 0.05, delay offset 0.12 s), rollback branch `g70-fingerprint-prev` → `dbc2916`.

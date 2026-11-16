@@ -1,6 +1,6 @@
 # G70 2024: six drives on factor 4.8, loop model of the straight-road sway, steering-delay offset (2026-11-16)
 
-**Status:** `g70-fingerprint` @ `dbc2916` on the device (installed 2026-11-16 12:17Z). Device settings: Lateral Jerk on, Enforce on, override **4.5 / 0.05**, delay offset **0.12 s**. **Not yet driven.**
+**Status:** `g70-fingerprint` @ `9954fdf` on the device (`dbc2916` installed 2026-11-16 12:17Z, `9954fdf` at 12:24Z). Device settings: Lateral Jerk on, Enforce on, override **4.5 / 0.05**, delay offset **0.12 s**. **Not yet driven.**
 
 Follows [2026-11-13-g70-drives-daw-lkas12.md](2026-11-13-g70-drives-daw-lkas12.md). Scripts: [tools/drive-eval](../../tools/drive-eval/README.md). Device identifiers and GPS are kept out of this repo.
 
@@ -86,13 +86,21 @@ Side effect to watch: torqued aligns its points with the published delay, so its
 ## 7. LKAS12 / other observations in these drives
 
 - Re-send worked on every route (about 89,000 frames, 0–2 mismatches per route, except below). The camera's status never went under 3: **the warning block is still untested.**
-- `b4`, 635.0–640.3 s (car started during the recording): the camera sent `0120ffff080dff00`, `0100ffff080dff00`, `01004141080d4b00`, i.e. bit 43 set with status 5. The filter treats any of bits 43–47 as a warning, so it cleared bit 43 for 54 frames. Bit 44 is the one seen with "take a break". **The filter should be narrowed to status 6 / bit 44** (not done yet).
-- `espDisabled` (`TCS11.TCS_PAS == 1`) in `ad`, `ae`, `af`, `b0`, `b4`: short groups at standstill after starting and at 69–76 mph shortly after; in `ae` one fell while lat active → "TAKE CONTROL IMMEDIATELY / Electronic Stability Control Disabled". Cause not established.
+- `b4`, 635.0–640.3 s (car started during the recording): the camera sent `0120ffff080dff00`, `0100ffff080dff00`, `01004141080d4b00`, i.e. bit 43 set with status 5. The filter treats any of bits 43–47 as a warning, so it cleared bit 43 for 54 frames. Bit 44 is the one seen with "take a break". **Fixed in `9954fdf`** (§9).
+- `espDisabled` (`TCS11.TCS_PAS == 1`) in `ad`, `ae`, `af`, `b0`, `b4`: short groups at standstill after starting and at 69–76 mph shortly after; in `ae` one fell while lat active → "TAKE CONTROL IMMEDIATELY / Electronic Stability Control Disabled". **User (2026-11-16): this is from switching the car's drive modes and is normal.** So the alert in `ae` (and the one in `a7` on 11-12) follows a drive-mode change while engaged. Not treated as a fault; no change made.
 - `faultTemp` panda status in six of eight recordings.
 
 ## 8. Open
 
 - Drive on the new settings: ≥ 10 min of straight highway > 60 mph and some curves; compare lane motion, lag, wheel motion, curve shortfall; confirm the logged delay.
 - If turn-in comes too early or the car cuts curves, lower the offset.
-- Narrow the LKAS12 filter. Speed-limit sign on the cluster still unreported.
-- `espDisabled` cause; `faultTemp`; opendbc tests never run on this branch.
+- Speed-limit sign on the cluster still unreported; the DAW warning itself still has not occurred with the fix installed.
+- `faultTemp`; opendbc tests never run on this branch.
+- Possible later change: a drive-mode switch while engaged raises `espDisabled` and an immediate-disable alert; whether to tolerate a sub-second `TCS_PAS` blip is undecided.
+
+## 9. Change `9954fdf`: narrower LKAS12 filter (2026-11-16 12:24Z)
+
+- `hyundaican.py` `lkas12_daw_filter`: replaces the status only when it is 6, and clears only bit 44 (`CF_Lkas12_DawWarning & 0x2`). Bit 43 and bits 45–47 pass through.
+- Offline, independent decoder: the 51 payloads from 11-13 are unchanged except `0300414108164b00` → `0300414108014b00`; the three start-up payloads from `b4` pass through unchanged; synthetic cases with bit 44 (alone, and together with bit 43) are cleared correctly.
+- Device: bundle `dbc2916..9954fdf`, guards passed, `g70-fingerprint-prev` → `dbc2916`, fast-forward, reboot. Settings unchanged (4.5 / 0.05, offset 0.12). Python only; firmware `f99ab974…`.
+- Not driven; no tests run.
