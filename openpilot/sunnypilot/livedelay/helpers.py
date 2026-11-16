@@ -32,3 +32,21 @@ def get_lat_delay(params: Params, stock_lat_delay: float) -> float:
     return stock_lat_delay
 
   return float(params.get("LagdValueCache", return_default=True))
+
+# dragalpilot (G70 2024): optional friction-ramp width in m/s^2, read from a one-line text file on the device.
+# The torque controllers ramp the friction term from -friction to +friction over +/- this error; stock is 0.2.
+# A wider ramp reacts less to small errors on a straight while keeping the full friction term in curves.
+# No file, or an unreadable one, means the stock value.
+FRICTION_THRESHOLD_FILE = "/data/g70_friction_threshold"
+FRICTION_THRESHOLD_MAX = 0.6
+
+
+def read_friction_threshold(default: float, path: str = FRICTION_THRESHOLD_FILE) -> float:
+  try:
+    with open(path) as f:
+      value = float(f.read().strip())
+  except (OSError, ValueError):
+    return default
+  if value != value:  # NaN
+    return default
+  return min(max(value, default), FRICTION_THRESHOLD_MAX)
