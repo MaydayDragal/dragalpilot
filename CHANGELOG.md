@@ -1081,3 +1081,12 @@ Details: [docs/findings/2026-11-16-g70-straight-sway-loop-model.md](docs/finding
 - **`9954fdf`** on `sunnypilot/g70-fingerprint` (pushed, installed 12:24Z): the LKAS12 filter now replaces only status 6 and clears only bit 44; camera start-up bit 43 passes through. Offline check on all logged payloads and synthetic cases. Not driven.
 - **`espDisabled` blips:** the user confirms they come from switching the car's drive modes and are normal. A switch while engaged raises the "Electronic Stability Control Disabled" alert (`a7`, `ae`). No change made.
 - Device: `9954fdf`, settings unchanged (Lateral Jerk on, override 4.5 / 0.05, delay offset 0.12 s), rollback branch `g70-fingerprint-prev` → `dbc2916`.
+
+## 2026-11-16 (evening): Drive on the delay offset, cluster speed-limit report, friction-ramp knob, new settings
+
+Details: [docs/findings/2026-11-16-g70-straight-sway-loop-model.md](docs/findings/2026-11-16-g70-straight-sway-loop-model.md) §10–§12.
+
+- **Drive `000000b5`** (4.5 / 0.05, Jerk on, offset 0.12 s): offset confirmed in the log (published delay 0.29–0.31 s). On 164 s of straight road above 60 mph, lane motion and wheel motion were about 20–40 % lower than on 4.8 / 0.07, except lane motion at 0.7–1.0 Hz; curves (shortfall 0.17) and tracking error (0.071) flat to slightly worse.
+- **Cluster speed limit (user report):** dashes where the map speed used to show when no sign is visible. The logs show the nav limit still reaching the camera and the re-sent LKAS12 matching the camera value; no cause found. The sunnypilot OSM data is empty on the device, which is a separate matter. Open, with two tests proposed.
+- **`d833479`** (pushed, installed 18:36Z): optional friction-ramp width read from `/data/g70_friction_threshold`, used by both torque controllers.
+- **Device settings (user: apply all three):** override 4.5 / 0.05 → 4.2 / 0.07, friction ramp 0.2 → 0.28, delay offset 0.12 → 0.15 s. Not yet driven.
