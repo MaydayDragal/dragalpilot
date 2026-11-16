@@ -134,16 +134,20 @@ def create_lfahda_mfc(packer, enabled, lfa_icon):
 
 # LKAS12 (0x53E, camera, 10 Hz, 8 bytes, no counter or checksum) carries the Driver Attention Warning status.
 # On the 2024 G70 the status counts 5..1 and reads 6, with bit 44 set, while the cluster shows "consider taking a break".
+# Bit 43 (seen for a few seconds while the camera starts, with status 5) and bits 45-47 are passed through untouched.
 LKAS12_DAW_WARNING = 6
+LKAS12_DAW_WARNING_BIT = 0x2  # bit 44, i.e. bit 1 of CF_Lkas12_DawWarning (43|5)
 
 
 def lkas12_daw_filter(lkas12: dict, last_level: int) -> tuple[dict, int]:
   """Returns the camera's LKAS12 values with the DAW warning replaced by the last normal attention level."""
   values = dict(lkas12)
   status = int(values["CF_LkasDawStatus"])
-  if status == LKAS12_DAW_WARNING or int(values["CF_Lkas12_DawWarning"]) != 0:
-    values["CF_LkasDawStatus"] = last_level
-    values["CF_Lkas12_DawWarning"] = 0
+  flags = int(values["CF_Lkas12_DawWarning"])
+  if status == LKAS12_DAW_WARNING or flags & LKAS12_DAW_WARNING_BIT:
+    if status == LKAS12_DAW_WARNING:
+      values["CF_LkasDawStatus"] = last_level
+    values["CF_Lkas12_DawWarning"] = flags & ~LKAS12_DAW_WARNING_BIT
   else:
     last_level = status
   return values, last_level
