@@ -1090,3 +1090,28 @@ Details: [docs/findings/2026-11-16-g70-straight-sway-loop-model.md](docs/finding
 - **Cluster speed limit (user report):** dashes where the map speed used to show when no sign is visible. The logs show the nav limit still reaching the camera and the re-sent LKAS12 matching the camera value; no cause found. The sunnypilot OSM data is empty on the device, which is a separate matter. Open, with two tests proposed.
 - **`d833479`** (pushed, installed 18:36Z): optional friction-ramp width read from `/data/g70_friction_threshold`, used by both torque controllers.
 - **Device settings (user: apply all three):** override 4.5 / 0.05 → 4.2 / 0.07, friction ramp 0.2 → 0.28, delay offset 0.12 → 0.15 s. Not yet driven.
+
+## 2026-11-16 (night): controlsd crash on `d833479` fixed, USB access from a second PC, four settings drives
+
+Details: [docs/findings/2026-11-17-g70-crash-fix-v1-delay-creep.md](docs/findings/2026-11-17-g70-crash-fix-v1-delay-creep.md) §1–§4.
+
+- **Crash (user report, confirmed in swaglog):** on `d833479` controlsd raised `AttributeError: 'LatControlTorque' object has no attribute 'friction_threshold'` as soon as steering engaged. The device runs `LatControlTorqueV0` (`TorqueControlTune` 0.0), which never got the attribute the jerk-aware extension read.
+- **Fix `77cc8c6`** (pushed, installed 22:33Z, user-authorized): the extension reads the ramp file itself. Confirmed on `000000bc`: 256 s lat active, one controlsd pid, no traceback.
+- **Second PC:** new SSH key (added to GitHub by the user, re-fetched by the device). USB network (NCM) fails against Windows (`Wrong NDP SIGN`); SSH over `adb forward` works, also in the car. The link drops at times; pulls verify by sha256 and retry.
+- **Drives `bc`, `bd`, `be`, `bf`** (V0): offset 0.15 s made the wheel busier above 0.7 Hz and was set back to 0.12; ramp 0.35 increased slow lane wander and was set back to 0.28; factor 4.2 did not improve curve shortfall and was set to 4.5 (`bf`, 102 s, best numbers of the set).
+- **Tools:** `tools/live/` (live reader, run only with the car off).
+
+## 2026-11-17: V1 controller, delay creep, request smoothing and fixed delay
+
+Details: [docs/findings/2026-11-17-g70-crash-fix-v1-delay-creep.md](docs/findings/2026-11-17-g70-crash-fix-v1-delay-creep.md) §5–§11.
+
+- **Neural-network lateral control assessed offline and not enabled:** the fuzzy-matched `GENESIS_G70` model asks for 55–67 % of the torque this car needs, and it cannot run with Enforce or Lateral Jerk.
+- **V1 (`TorqueControlTune` 1.0) with Lateral Jerk, drives `c0`–`c3`:** 10–35 % less wheel motion above 0.7 Hz and lower peak torque in curves; curve shortfall / peak 0.21–0.23 against 0.16–0.17 on V0; overshoot unchanged. **User: V1 felt better; a little hunting on straights that seems to grow over time.** V1 kept. Ramp 0.24 against 0.28 on V1: no change in lane motion at 0.2–0.45 Hz.
+- **Finding:** lane motion at 0.2–0.45 Hz stayed at about 0.75–1.2 cm per band across every torque setting and both controllers.
+- **Finding:** lagd's own estimate was flat at 0.174–0.179 s without the offset and has risen on every drive since (to 0.233 s), taking the published delay from 0.29 to 0.37 s.
+- **`237edfd`** (pushed, installed, user request): optional request smoothing from `/data/g70_lat_smooth`, set to 0.2 s.
+- **`466c14c`** (pushed, installed 20:42Z, user request): optional fixed published delay from `/data/g70_lat_delay_fixed`, set to 0.33 s; the offset is ignored while it exists.
+- **Device:** `466c14c`, V1, 4.5 / 0.07, ramp 0.24, fixed delay 0.33 s, smoothing 0.2 s; rollback branch `g70-fingerprint-prev` → `237edfd`. **Fixed delay and smoothing not yet driven.**
+- **Tools:** `tools/drive-eval/compare_req.py`; route lists updated; V0/V1 setpoint note in the README.
+- Tests not run for any of the three sunnypilot commits.
+

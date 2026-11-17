@@ -3,7 +3,7 @@ sys.path.insert(0, sys.argv[1]); from lib import load
 R = {}
 for D in sys.argv[2:]: R.update(load(D))
 CFG = {"000000a3":"5.0/.04 enf", "000000a4":"5.0/.04 enf+jerk", "000000a5":"5.0/.04 enf", "000000a6":"5.0/.04 enf", "000000a7":"4.0/.07 enf", "000000aa":"4.0/.07 enf+jerk", "000000ab":"enforce OFF"}
-GROUPS = {"5.0/.04 enf": ["000000a3","000000a5","000000a6"], "4.0/.07 enf": ["000000a7"], "4.0/.07 enf+jerk": ["000000aa"], "enforce OFF": ["000000ab"], "4.5/.07 enf+jerk": ["000000ac"], "4.8/.07 enf+jerk": ["000000ad","000000ae","000000af","000000b0","000000b1","000000b4"], "4.5/.05 jerk+0.12s": ["000000b5"]}
+GROUPS = {"5.0/.04 enf": ["000000a3","000000a5","000000a6"], "4.0/.07 enf": ["000000a7"], "4.0/.07 enf+jerk": ["000000aa"], "enforce OFF": ["000000ab"], "4.5/.07 enf+jerk": ["000000ac"], "4.8/.07 enf+jerk": ["000000ad","000000ae","000000af","000000b0","000000b1","000000b4"], "4.5/.05 jerk+0.12s": ["000000b5"], "4.2/.07 r.28 +0.15s": ["000000bc"], "4.2/.07 r.28 +0.12s": ["000000bd"], "4.2/.07 r.35 +0.12s": ["000000be"], "4.5/.07 r.28 +0.12s": ["000000bf"], "V1 4.5/.07 r.28 +0.135s": ["000000c0","000000c1"], "V1 4.5/.07 r.24 +0.135s": ["000000c2","000000c3"]}
 N = 2048  # 20.48 s windows, 0.049 Hz resolution
 def runs(m, minlen):
     idx = np.flatnonzero(np.diff(np.r_[0, m.astype(int), 0])); return [(a, b) for a, b in zip(idx[::2], idx[1::2]) if b - a >= minlen]
@@ -21,6 +21,7 @@ for bandname, lo, hi in ((">60 mph", 26.8, 99), ("35-60 mph", 15.6, 26.8)):
         acc = dict(n=0); keys = ["lane", "des", "act", "ang", "tq", "des_act", "lane_des", "tq_act", "des_tq"]
         P = {k: 0 for k in keys}
         for r in routes:
+            if r not in R: continue  # route not in the loaded folders
             d = R[r]; lanec = (d["ll"] + d["rl"]) / 2
             for sl in windows(d, lo, hi):
                 L, D_, A, G, T = spec(lanec[sl]), spec(d["desiredLateralAccel"][sl]), spec(d["actualLateralAccel"][sl]), spec(d["ang"][sl]), spec(d["out"][sl])

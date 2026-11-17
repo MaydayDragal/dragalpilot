@@ -52,3 +52,14 @@ Copy the `.pkl` files to the PC and delete `/data/tmp/ext` afterwards. A route i
 | `speedlimit_sources.py <route>` | comma | sunnypilot map source validity and a sample of the speed-limit resolver |
 | `hda11_vs_nav.py <route> ...` | comma | camera `0x484` payloads against the nav limit and LKAS12 sign |
 | `esp_events.py <scripts dir> <dir> ...` | PC | when `espDisabled` events occur (speed, lat active) |
+
+## Added 2026-11-17
+
+| Script | Where | What it does |
+|---|---|---|
+| `compare_req.py <scripts dir> <dir> ...` | PC | `compare.py`'s tracking and curve tables with the request taken as `desiredCurvature × v²`, so V0 and V1 drives can be compared |
+
+- **V0 and V1 log different setpoints.** `LatControlTorqueV0` logs the future request as `desiredLateralAccel`; the upstream controller (`TorqueControlTune` 1.0) logs the request one steering delay ago. Error, gain and lag from `compare.py` and `weave.py` are not comparable across the two; lane and wheel motion are.
+- **Pulling over USB.** With platform-tools, `adb forward tcp:8022 tcp:22` and ssh to `127.0.0.1:8022` (use `-o HostKeyAlias=<the device's known_hosts name>`). The link drops at times: take the device's `sha256sum` list first, fetch only files that do not match yet, and repeat until all match.
+- `weave.py` now skips routes that are not in the loaded folders.
+
