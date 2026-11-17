@@ -310,6 +310,7 @@ static safety_config hyundai_init(uint16_t param) {
     HYUNDAI_COMMON_TX_MSGS(2)
     {0x484, 0, 8, .check_relay = true},  // HDA11_MFC Bus 0: block the camera's copy to suppress "grasp not detected" (commaai/panda#2045)
     {0x53E, 0, 8, .check_relay = true},  // LKAS12 Bus 0: block the camera's copy; openpilot re-sends it without the DAW "take a break" warning
+    {0x420, 0, 8, .check_relay = true},  // SCC11 Bus 0: block the camera's copy; openpilot re-sends each frame, optionally without the standstill prompt
   };
 
   static const CanMsg HYUNDAI_CAMERA_SCC_LONG_TX_MSGS[] = {

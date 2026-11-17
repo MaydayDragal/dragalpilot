@@ -76,6 +76,8 @@ class CarController(CarControllerBase, CcncCarController, EsccCarController, Lea
     self.last_button_frame = 0
     self.cancel_counter = 0
     self.lkas12_daw_level = 5  # last normal DAW attention level seen from the camera
+    self.scc11_sent_ts_nanos = 0  # timestamp of the last camera SCC11 frame that was re-sent
+    self.scc11_filter = hyundaican.scc11_filter_enabled()  # read once at start
     self.now_nanos = 0
 
   def update(self, CC, CC_SP, CS, now_nanos):
@@ -197,6 +199,14 @@ class CarController(CarControllerBase, CcncCarController, EsccCarController, Lea
       lkas12, self.lkas12_daw_level = hyundaican.lkas12_daw_filter(CS.lkas12, self.lkas12_daw_level)
       if self.frame % 10 == 0 and (self.now_nanos - CS.lkas12_ts_nanos) < 0.5e9:
         can_sends.append(hyundaican.create_lkas12(self.packer, lkas12))
+
+    # 50 Hz SCC11: the panda blocks the camera's copy (G70 2024, camera SCC, stock longitudinal). Re-send each new
+    # camera frame once so AliveCounterACC stays in sequence, and stop when the camera's frame is older than 0.1 s.
+    if self.car_fingerprint == CAR.GENESIS_G70_2024 and not self.CP.openpilotLongitudinalControl and CS.scc11_ts_nanos > 0:
+      if CS.scc11_ts_nanos != self.scc11_sent_ts_nanos and (self.now_nanos - CS.scc11_ts_nanos) < 0.1e9:
+        scc11 = hyundaican.scc11_info_filter(CS.scc11) if self.scc11_filter else CS.scc11
+        can_sends.append(hyundaican.create_scc11_passthrough(self.packer, scc11))
+        self.scc11_sent_ts_nanos = CS.scc11_ts_nanos
 
     # 5 Hz ACC options
     if self.frame % 20 == 0 and self.CP.openpilotLongitudinalControl:

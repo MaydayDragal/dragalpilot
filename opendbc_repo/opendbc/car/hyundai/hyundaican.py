@@ -1,3 +1,4 @@
+import os
 from opendbc.car.crc import CRC8J1850, mk_crc8_fun
 from opendbc.car.hyundai.values import CAR, HyundaiFlags
 
@@ -155,6 +156,32 @@ def lkas12_daw_filter(lkas12: dict, last_level: int) -> tuple[dict, int]:
 
 def create_lkas12(packer, values):
   return packer.make_can_msg("LKAS12", 0, values)
+
+
+# SCC11 (0x420, camera, 50 Hz, 8 bytes, rolling AliveCounterACC, no checksum). SCCInfoDisplay = 4 makes the cluster
+# show "Use switch or pedal to accelerate" while cruise holds the car at a stop. On the G70 2024 with stock
+# longitudinal the panda blocks the camera's copy and the car controller re-sends each frame once. The frame is
+# unchanged unless /data/g70_scc11_filter exists, in which case SCCInfoDisplay 4 is sent as 0. openpilot itself
+# keeps reading the camera's original (cruiseState.standstill). Every signal of the DBC message is re-packed; the
+# 15 signals cover all 64 bits (checked on 294,043 logged frames, tools/drive-eval/scc11_roundtrip.py).
+SCC11_INFO_STANDSTILL = 4
+SCC11_FILTER_FILE = "/data/g70_scc11_filter"
+
+
+def scc11_filter_enabled(path: str = SCC11_FILTER_FILE) -> bool:
+  return os.path.exists(path)
+
+
+def scc11_info_filter(scc11: dict) -> dict:
+  """Returns the camera's SCC11 values with the standstill prompt (SCCInfoDisplay 4) cleared."""
+  values = dict(scc11)
+  if int(values["SCCInfoDisplay"]) == SCC11_INFO_STANDSTILL:
+    values["SCCInfoDisplay"] = 0
+  return values
+
+
+def create_scc11_passthrough(packer, values):
+  return packer.make_can_msg("SCC11", 0, values)
 
 
 def create_acc_commands(packer, enabled, accel, upper_jerk, idx, lead_data: CanLeadData,

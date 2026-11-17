@@ -68,6 +68,9 @@ class CarState(CarStateBase, EsccCarStateBase, MadsCarState, CarStateExt):
     # camera LKAS12, re-sent by the car controller with the DAW warning removed (G70 2024)
     self.lkas12 = {}
     self.lkas12_ts_nanos = 0
+    # camera SCC11, re-sent by the car controller (G70 2024, stock longitudinal); see hyundaican.scc11_info_filter
+    self.scc11 = {}
+    self.scc11_ts_nanos = 0
 
     # On some cars, CLU15->CF_Clu_VehicleSpeed can oscillate faster than the dash updates. Sample at 5 Hz
     self.cluster_speed = 0
@@ -194,6 +197,9 @@ class CarState(CarStateBase, EsccCarStateBase, MadsCarState, CarStateExt):
     if self.CP.carFingerprint == CAR.GENESIS_G70_2024:
       self.lkas12 = copy.copy(cp_cam.vl["LKAS12"])
       self.lkas12_ts_nanos = cp_cam.ts_nanos["LKAS12"]["CF_LkasDawStatus"]
+      if not self.CP.openpilotLongitudinalControl:
+        self.scc11 = copy.copy(cp_cam.vl["SCC11"])
+        self.scc11_ts_nanos = cp_cam.ts_nanos["SCC11"]["AliveCounterACC"]
     self.steer_state = cp.vl["MDPS12"]["CF_Mdps_ToiActive"]  # 0 NOT ACTIVE, 1 ACTIVE
     prev_cruise_buttons = self.cruise_buttons[-1]
     prev_main_buttons = self.main_buttons[-1]
