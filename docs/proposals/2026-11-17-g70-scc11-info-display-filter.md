@@ -1,6 +1,6 @@
 # Proposal: hide "Use switch or pedal to accelerate" by filtering SCC11 (2026-11-17)
 
-**Status (2026-11-17 23:40Z): stages 0 and 1 passed. Branch `sunnypilot/g70-scc11-filter` @ `5aeff4e` holds the car and safety code and the rebuilt firmware. Nothing installed; stage 2 (pass-through drive) is next and needs the user's go-ahead.**
+**Status (2026-11-17 23:40Z): stages 0 and 1 passed. Branch `sunnypilot/g70-scc11-filter` @ `5aeff4e` holds the car and safety code and the rebuilt firmware. Installed in pass-through mode on 2026-11-17 23:24Z at the user's request (panda flashed, no faults offroad); the stage 2 drive is pending.**
 
 Evidence labels: **source fact** (`466c14c` on the device), **observation** (route `000000c4`), **inference**, **unknown**.
 

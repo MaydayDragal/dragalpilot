@@ -1124,3 +1124,4 @@ Details: [docs/findings/2026-11-17-g70-crash-fix-v1-delay-creep.md](docs/finding
 - **Tools:** `bookmark_bits.py`, `scc11_roundtrip.py`; route lists updated.
 - Device: `df21ce2`, rollback branch → `466c14c`. Tests not run.
 - **Later:** panda firmware build set up on the second PC; it reproduces the shipped firmware byte for byte. Firmware with the `0x420` entry built and committed to `sunnypilot/g70-scc11-filter` (`5aeff4e`). Not installed.
+- **23:24Z, user request ("do both"):** `5aeff4e` installed from a bundle (fast-forward from `df21ce2`, rollback branch → `df21ce2`), reboot; pandad logged "Done flashing" and is running, panda state `noOutput`, no faults; clean tree; filter file absent (pass-through). The signature line was not captured in the logs. Speed-dependent smoothing and the SCC11 re-send are both undriven and will be tested in the same drive.
