@@ -1123,4 +1123,4 @@ Details: [docs/findings/2026-11-17-g70-crash-fix-v1-delay-creep.md](docs/finding
 - **Cluster "Use switch or pedal to accelerate" (user report with four bookmarks):** camera SCC11 (`0x420`, bus 2) `SCCInfoDisplay` = 4, i.e. byte 0 bit 3; five periods in `c4`, all at standstill with cruise on, 1.2–1.8 s before bookmarks 1, 3 and 4. Proposal and stage-0 result: [docs/proposals/2026-11-17-g70-scc11-info-display-filter.md](docs/proposals/2026-11-17-g70-scc11-info-display-filter.md). Code on branch `sunnypilot/g70-scc11-filter` (`44ee7de`), **not installable until the panda firmware is rebuilt**.
 - **Tools:** `bookmark_bits.py`, `scc11_roundtrip.py`; route lists updated.
 - Device: `df21ce2`, rollback branch → `466c14c`. Tests not run.
-
+- **Later:** panda firmware build set up on the second PC; it reproduces the shipped firmware byte for byte. Firmware with the `0x420` entry built and committed to `sunnypilot/g70-scc11-filter` (`5aeff4e`). Not installed.

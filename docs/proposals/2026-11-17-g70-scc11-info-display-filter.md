@@ -1,6 +1,6 @@
 # Proposal: hide "Use switch or pedal to accelerate" by filtering SCC11 (2026-11-17)
 
-**Status (2026-11-17 23:10Z): stage 0 passed; car and safety code written on branch `sunnypilot/g70-scc11-filter` (`44ee7de`, WIP, **not installable**: the panda firmware is not rebuilt). Nothing installed.**
+**Status (2026-11-17 23:40Z): stages 0 and 1 passed. Branch `sunnypilot/g70-scc11-filter` @ `5aeff4e` holds the car and safety code and the rebuilt firmware. Nothing installed; stage 2 (pass-through drive) is next and needs the user's go-ahead.**
 
 Evidence labels: **source fact** (`466c14c` on the device), **observation** (route `000000c4`), **inference**, **unknown**.
 
@@ -73,3 +73,10 @@ No opendbc car or safety tests can be run on the PC used on 2026-11-17 (no Linux
 - Camera stream as logged: counter step 1 on 293,936 frame pairs and 2 on 8; spacing median 20.0 ms, 1st–99th percentile 10.3–29.8 ms, maximum 44.6 ms.
 
 The car controller keeps only the camera's latest frame per 10 ms cycle, so two camera frames inside one cycle would be re-sent as one (a counter step of 2 on bus 0). The 10.3 ms first percentile says this will be rare; stage 2 has to count it.
+
+## 8. Stage 1 result (2026-11-17, offline result)
+
+Built on the second PC with `tools/panda-fw/build_fw.sh` (Git Bash): sources taken with `git archive` (LF), Arm GNU Toolchain 13.2.Rel1 for Windows (zip sha256 `51d933f0…`, equal to Arm's published value) on a short path, flags from the pinned `sunnyhaibin/panda` `SConscript` @ `8a16e089b885`, DEBUG build, committed `gitversion.h` and `cert.h`, signed with the tree's `board/crypto/sign.py` (`SETLEN=1`, debug key).
+
+- **Reproduction:** `df21ce2` builds to `main.bin` sha256 `471ab450…` and `panda_h7.bin.signed` `f99ab974…`, byte for byte the files shipped in the tree.
+- **With the entry (`5aeff4e`):** `main.bin` `351ba34c…`, `panda_h7.bin.signed` `8213b0c4…`, signature starts `1a059f84405a5733`, +16 bytes. The only symbol whose size changed is `HYUNDAI_CAMERA_SCC_TX_MSGS` (80 → 96 bytes, 5 → 6 entries); the sixth entry decodes as `0x420`, bus 0, len 8, relay check, in the same layout as the `0x484` and `0x53E` entries. Bootstub not rebuilt.
