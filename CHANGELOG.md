@@ -1115,3 +1115,12 @@ Details: [docs/findings/2026-11-17-g70-crash-fix-v1-delay-creep.md](docs/finding
 - **Tools:** `tools/drive-eval/compare_req.py`; route lists updated; V0/V1 setpoint note in the README.
 - Tests not run for any of the three sunnypilot commits.
 
+## 2026-11-17 (evening): drive on fixed delay and smoothing, speed-dependent smoothing, cluster prompt traced to SCC11
+
+- **Drive `000000c4`** (V1, 4.5 / 0.07, ramp 0.24, delay fixed 0.33 s, smoothing 0.2 s; request-based numbers): above 60 mph (584 s) RMS error 0.070, lane motion 0.2–0.7 Hz 0.0237, wheel 0.125 / 0.046 (0.2–0.7 / 0.7–4 Hz), the lowest of the V1 set; straight windows (195 s) lane RMS 2.26 / 1.20 / 1.12 / 0.80 cm at 0.1–0.2 / 0.2–0.3 / 0.3–0.45 / 0.45–0.7 Hz, wheel 44–58 % lower from 0.45 Hz up. Curves (11): shortfall / peak 0.22, overshoot / peak 0.20. At 1–10 mph (38 s) wheel rate RMS 13.3 °/s against 3.3–7.1 on earlier drives. **User: busier at low speed, much better on the highway.**
+- **Delay:** published 0.330 s throughout; lagd's own estimate stayed at 0.231–0.233 s, the first drive since the offset without a rise.
+- **`df21ce2`** (pushed, installed 23:10Z, user request): `/data/g70_lat_smooth` may hold `seconds v_lo v_hi`; set to `0.2 11 20` (none below 25 mph, full from 45 mph). Not driven.
+- **Cluster "Use switch or pedal to accelerate" (user report with four bookmarks):** camera SCC11 (`0x420`, bus 2) `SCCInfoDisplay` = 4, i.e. byte 0 bit 3; five periods in `c4`, all at standstill with cruise on, 1.2–1.8 s before bookmarks 1, 3 and 4. Proposal and stage-0 result: [docs/proposals/2026-11-17-g70-scc11-info-display-filter.md](docs/proposals/2026-11-17-g70-scc11-info-display-filter.md). Code on branch `sunnypilot/g70-scc11-filter` (`44ee7de`), **not installable until the panda firmware is rebuilt**.
+- **Tools:** `bookmark_bits.py`, `scc11_roundtrip.py`; route lists updated.
+- Device: `df21ce2`, rollback branch → `466c14c`. Tests not run.
+

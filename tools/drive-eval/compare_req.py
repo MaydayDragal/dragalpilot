@@ -13,7 +13,7 @@ R = {}
 for D in sys.argv[2:]: R.update(load(D))
 CFG = {"000000b5": "V0 4.5/.05 r.20 +.12", "000000bc": "V0 4.2/.07 r.28 +.15", "000000bd": "V0 4.2/.07 r.28 +.12", "000000be": "V0 4.2/.07 r.35 +.12",
        "000000bf": "V0 4.5/.07 r.28 +.12", "000000c0": "V1 4.5/.07 r.28 +.135", "000000c1": "V1 4.5/.07 r.28 +.135",
-       "000000c2": "V1 4.5/.07 r.24 +.135", "000000c3": "V1 4.5/.07 r.24 +.135"}
+       "000000c2": "V1 4.5/.07 r.24 +.135", "000000c3": "V1 4.5/.07 r.24 +.135", "000000c4": "V1 r.24 fix.33 sm.2"}
 CFG = {r: c for r, c in CFG.items() if r in R}
 def runs(m, minlen):
     idx = np.flatnonzero(np.diff(np.r_[0, m.astype(int), 0])); return [(a, b) for a, b in zip(idx[::2], idx[1::2]) if b - a >= minlen]
