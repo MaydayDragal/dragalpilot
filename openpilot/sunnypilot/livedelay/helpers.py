@@ -68,3 +68,23 @@ def read_lat_smooth_seconds(default: float, path: str = LAT_SMOOTH_FILE) -> floa
   if value != value:  # NaN
     return default
   return min(max(value, 0.0), LAT_SMOOTH_MAX)
+
+# dragalpilot (G70 2024): optional fixed steering delay in seconds, read from a one-line text file on the device.
+# With the offset above, lagd's own estimate crept up on every drive (0.174 s to 0.233 s over nine drives), so
+# the published delay moved without any setting changing. When this file exists, lagd publishes exactly this
+# value as lateralDelay and ignores the offset; the learner keeps running and lateralDelayEstimate stays raw.
+# No file, or an unreadable one, means the learned value (plus the offset, if set).
+LAT_DELAY_FIXED_FILE = "/data/g70_lat_delay_fixed"
+LAT_DELAY_FIXED_MIN = 0.1
+LAT_DELAY_FIXED_MAX = 0.5
+
+
+def read_lat_delay_fixed(path: str = LAT_DELAY_FIXED_FILE) -> float | None:
+  try:
+    with open(path) as f:
+      value = float(f.read().strip())
+  except (OSError, ValueError):
+    return None
+  if value != value:  # NaN
+    return None
+  return min(max(value, LAT_DELAY_FIXED_MIN), LAT_DELAY_FIXED_MAX)

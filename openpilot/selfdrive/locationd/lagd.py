@@ -15,7 +15,7 @@ from openpilot.common.realtime import config_realtime_process
 from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.locationd.helpers import PoseCalibrator, Pose, fft_next_good_size, parabolic_peak_interp
 from openpilot.sunnypilot.livedelay.lagd_toggle import LagdToggle
-from openpilot.sunnypilot.livedelay.helpers import read_lat_delay_offset
+from openpilot.sunnypilot.livedelay.helpers import read_lat_delay_fixed, read_lat_delay_offset
 
 BLOCK_SIZE = 100
 BLOCK_NUM = 50
@@ -404,6 +404,7 @@ def main():
 
   lagd_toggle = LagdToggle(CP)
   lat_delay_offset = read_lat_delay_offset()  # dragalpilot: 0.0 unless /data/g70_lat_delay_offset exists
+  lat_delay_fixed = read_lat_delay_fixed()  # dragalpilot: None unless /data/g70_lat_delay_fixed exists
 
   while True:
     sm.update()
@@ -424,7 +425,11 @@ def main():
         params.put("LiveDelay", lag_msg_dat)
 
       # publish with the optional offset (lateralDelayEstimate stays the raw estimate)
-      if lat_delay_offset > 0.0:
+      if lat_delay_fixed is not None:
+        # a fixed published delay replaces the learned value and the offset
+        lag_msg.lateralDelay.lateralDelay = lat_delay_fixed
+        pm.send('lateralDelay', lag_msg.to_bytes())
+      elif lat_delay_offset > 0.0:
         lag_msg.lateralDelay.lateralDelay = lag_msg.lateralDelay.lateralDelay + lat_delay_offset
         pm.send('lateralDelay', lag_msg.to_bytes())
       else:
