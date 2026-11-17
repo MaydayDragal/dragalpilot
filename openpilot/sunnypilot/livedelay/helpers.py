@@ -50,3 +50,21 @@ def read_friction_threshold(default: float, path: str = FRICTION_THRESHOLD_FILE)
   if value != value:  # NaN
     return default
   return min(max(value, default), FRICTION_THRESHOLD_MAX)
+
+# dragalpilot (G70 2024): optional smoothing of the model's steering request, in seconds, read from a one-line
+# text file on the device. modeld low-passes desiredCurvature with this time constant and, as upstream intends
+# for LAT_SMOOTH_SECONDS, both modeld and controlsd add it to the steering delay they plan and compare with.
+# No file, or an unreadable one, means the stock value.
+LAT_SMOOTH_FILE = "/data/g70_lat_smooth"
+LAT_SMOOTH_MAX = 0.3
+
+
+def read_lat_smooth_seconds(default: float, path: str = LAT_SMOOTH_FILE) -> float:
+  try:
+    with open(path) as f:
+      value = float(f.read().strip())
+  except (OSError, ValueError):
+    return default
+  if value != value:  # NaN
+    return default
+  return min(max(value, 0.0), LAT_SMOOTH_MAX)
