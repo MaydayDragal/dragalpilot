@@ -41,13 +41,19 @@ from openpilot.selfdrive.modeld.parse_model_outputs import Parser
 from openpilot.selfdrive.modeld.fill_model_msg import fill_model_msg, fill_driving_model_data, fill_pose_msg, PublishState
 from openpilot.selfdrive.modeld.constants import ModelConstants, Plan
 from openpilot.selfdrive.modeld.helpers import MODELS_DIR, chestnut_present, chestnut_compiled, modeld_pkl_path, load_oob, wait_for_chestnut
-from openpilot.sunnypilot.livedelay.helpers import get_lat_delay, read_lat_smooth_seconds
+from openpilot.sunnypilot.livedelay.helpers import get_lat_delay, lat_smooth_at, read_lat_smooth_seconds, read_lat_smooth_speeds
 from openpilot.sunnypilot.modeld_v2.modeld_base import ModelStateBase
 from openpilot.sunnypilot.selfdrive.controls.lib.relc import RoadEdgeLaneChangeController
 
 SEND_RAW_PRED = os.getenv('SEND_RAW_PRED')
 
-LAT_SMOOTH_SECONDS = read_lat_smooth_seconds(0.0)  # dragalpilot: stock unless /data/g70_lat_smooth exists; controlsd imports this too
+LAT_SMOOTH_SECONDS = read_lat_smooth_seconds(0.0)  # dragalpilot: stock unless /data/g70_lat_smooth exists
+LAT_SMOOTH_V_LO, LAT_SMOOTH_V_HI = read_lat_smooth_speeds()  # dragalpilot: optional speed range for the smoothing
+
+
+def lat_smooth_seconds(v_ego: float) -> float:
+  # dragalpilot: the smoothing in effect at this speed; controlsd imports this so both add the same delay
+  return lat_smooth_at(v_ego, LAT_SMOOTH_SECONDS, LAT_SMOOTH_V_LO, LAT_SMOOTH_V_HI)
 LONG_SMOOTH_SECONDS = 0.3
 MIN_LAT_CONTROL_SPEED = 0.3
 BIG_MODEL_TIMEOUT = 60
@@ -72,7 +78,7 @@ def get_action_from_model(model_output: dict[str, np.ndarray], prev_action: log.
   stop = should_stop(v_ego, desired_accel)
   desired_accel = smooth_value(desired_accel, prev_action.desiredAcceleration, LONG_SMOOTH_SECONDS)
   if v_ego > MIN_LAT_CONTROL_SPEED:
-    desired_curvature = smooth_value(desired_curvature, prev_action.desiredCurvature, LAT_SMOOTH_SECONDS)
+    desired_curvature = smooth_value(desired_curvature, prev_action.desiredCurvature, lat_smooth_seconds(v_ego))
   else:
     desired_curvature = prev_action.desiredCurvature
 
@@ -380,7 +386,7 @@ def main(demo=False):
     frame_id = sm["narrowRoadCameraState"].frameId
     v_ego = max(sm["carState"].vEgo, 0.)
     model.lat_delay = get_lat_delay(params, sm["lateralDelay"].lateralDelay)
-    lat_delay = sm["lateralDelay"].lateralDelay + LAT_SMOOTH_SECONDS
+    lat_delay = sm["lateralDelay"].lateralDelay + lat_smooth_seconds(v_ego)
     if sm.updated["extrinsicsCalibration"] and sm.seen['narrowRoadCameraState'] and sm.seen['deviceState']:
       device_from_calib_euler = np.array(sm["extrinsicsCalibration"].rpyCalib, dtype=np.float32)
       dc = DEVICE_CAMERAS[(str(sm['deviceState'].deviceType), str(sm['narrowRoadCameraState'].sensor))]

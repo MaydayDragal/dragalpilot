@@ -62,12 +62,33 @@ LAT_SMOOTH_MAX = 0.3
 def read_lat_smooth_seconds(default: float, path: str = LAT_SMOOTH_FILE) -> float:
   try:
     with open(path) as f:
-      value = float(f.read().strip())
-  except (OSError, ValueError):
+      value = float(f.read().split()[0])
+  except (OSError, ValueError, IndexError):
     return default
   if value != value:  # NaN
     return default
   return min(max(value, 0.0), LAT_SMOOTH_MAX)
+
+
+# The same file may carry two more numbers, "seconds v_lo v_hi" (speeds in m/s): no smoothing below v_lo, the full
+# value above v_hi, linear in between. On the car, 0.2 s at all speeds calmed the wheel on the highway and made
+# the steering busier below about 10 mph. One number, or unusable speeds, means the same value at every speed.
+def read_lat_smooth_speeds(path: str = LAT_SMOOTH_FILE) -> tuple[float, float]:
+  try:
+    with open(path) as f:
+      parts = f.read().split()
+    v_lo, v_hi = float(parts[1]), float(parts[2])
+  except (OSError, ValueError, IndexError):
+    return 0.0, 0.0
+  if v_lo != v_lo or v_hi != v_hi or v_lo < 0.0 or v_hi <= v_lo:
+    return 0.0, 0.0
+  return v_lo, v_hi
+
+
+def lat_smooth_at(v_ego: float, seconds: float, v_lo: float, v_hi: float) -> float:
+  if v_hi <= v_lo:
+    return seconds
+  return seconds * min(max((v_ego - v_lo) / (v_hi - v_lo), 0.0), 1.0)
 
 # dragalpilot (G70 2024): optional fixed steering delay in seconds, read from a one-line text file on the device.
 # With the offset above, lagd's own estimate crept up on every drive (0.174 s to 0.233 s over nine drives), so
