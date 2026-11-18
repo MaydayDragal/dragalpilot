@@ -1146,3 +1146,13 @@ Details: [docs/findings/2026-11-17-g70-crash-fix-v1-delay-creep.md](docs/finding
 - **Tools:** `lkas11_daw_scan.py`; route lists updated.
 - Tests not run.
 
+## 2026-11-18 (later): review of straights and turns, controller set to V0 with smoothing, findings written up
+
+Details: [docs/findings/2026-11-18-g70-smoothing-scc11-chime-curves.md](docs/findings/2026-11-18-g70-smoothing-scc11-chime-curves.md).
+
+- **Curves (`tools/drive-eval/curve_position.py`):** the car is inside the lane centre through sustained curves on every setup: 0.36–0.41 m just after entry on V0, 0.33 m on V1 without smoothing, 0.21 m on V1 with the fixed delay and smoothing (`c4`–`c7`, 28 curves), where the median swing is 0.26 m against 0.42–0.58 m. Mid-curve the car delivers 97–101 % of the request on every setup, so the `compare.py` shortfall and overshoot are entry and exit timing. The earlier suggestion that factor 4.5 leaves curves short was wrong.
+- **Straights:** V1 has about 30 % more lane motion at 0.2–0.45 Hz than V0 (1.0–1.4 cm against 0.76–1.06 cm per band); the largest band is 0.1–0.2 Hz on every setup, peak at 0.15 Hz. Factor, friction, ramp and smoothing strength do not move the hunting band.
+- **Next path:** V0 with the current smoothing, then V1 with stronger feedback if curves suffer; one fixed test route.
+- **Device (user request):** `TorqueControlTune` 1.0 → 0.0. Build and all other settings unchanged (`500ba91`). Not driven.
+- **Docs:** findings for 2026-11-17 evening to 2026-11-18 written; `curve_position.py` added.
+

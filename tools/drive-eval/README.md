@@ -63,3 +63,20 @@ Copy the `.pkl` files to the PC and delete `/data/tmp/ext` afterwards. A route i
 - **Pulling over USB.** With platform-tools, `adb forward tcp:8022 tcp:22` and ssh to `127.0.0.1:8022` (use `-o HostKeyAlias=<the device's known_hosts name>`). The link drops at times: take the device's `sha256sum` list first, fetch only files that do not match yet, and repeat until all match.
 - `weave.py` now skips routes that are not in the loaded folders.
 
+## Added 2026-11-18
+
+| Script | Where | What it does |
+|---|---|---|
+| `bookmark_bits.py <route> [window]` | comma (piped, read-only) | CAN bits that change before every chosen bookmark (`BOOKMARKS=1,3,4`) and are otherwise quiet; history of SCC11 `SCCInfoDisplay` |
+| `scc11_roundtrip.py <route> ...` | comma (piped) | every logged camera SCC11 payload decoded and re-packed from the DBC, plus the effect of the standstill-prompt filter |
+| `scc11_resend_check.py <route>` | comma (piped) | camera SCC11 against what openpilot requested and what the panda sent: counts, counter steps, spacing, delay, payload equality, panda state, events |
+| `lkas11_daw_scan.py <route> ...` | comma (piped) | camera LKAS11 frames by `CF_Lkas_FcwBasReq`, `CF_Lkas_SysWarning` and LKAS12 attention warning |
+| `plan_dump.py <route>` | comma (piped, result to stdout as `.npy`) | per model frame: speed, flags, published delay, logged action, lane lines, plan yaw and yaw rate |
+| `smooth_methods.py <file.plan.npy> ...` | PC | rebuilds the request from the logged plan as modeld does and compares smoothing and look-ahead variants (open loop) |
+| `curve_position.py <scripts dir> <dir> ...` | PC | lane position at curve entry, mid-curve and exit, swing, and delivered / requested lateral acceleration |
+
+"Piped" means `ssh ... 'cd /data/openpilot && PYTHONPATH=/data/openpilot /usr/local/venv/bin/python - <args>' < script.py`: nothing is written on the device.
+
+- **Signs:** model lane-line `y` is positive to the right (the left line is negative), and `controlsState.desiredCurvature` is positive for a right curve (correlation with `steeringAngleDeg` −0.93 on `c1`).
+- **Echo sources in `can`:** `src` 128 + bus is a frame the panda put on that bus, forwarded frames included; `src` 192 + bus is a frame openpilot asked for that the panda rejected.
+
