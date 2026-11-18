@@ -76,6 +76,7 @@ class CarController(CarControllerBase, CcncCarController, EsccCarController, Lea
     self.last_button_frame = 0
     self.cancel_counter = 0
     self.lkas12_daw_level = 5  # last normal DAW attention level seen from the camera
+    self.lkas11_basreq_state = 0  # see hyundaican.lkas11_daw_filter
     self.scc11_sent_ts_nanos = 0  # timestamp of the last camera SCC11 frame that was re-sent
     self.scc11_filter = hyundaican.scc11_filter_enabled()  # read once at start
     self.now_nanos = 0
@@ -162,8 +163,12 @@ class CarController(CarControllerBase, CcncCarController, EsccCarController, Lea
     sys_warning, sys_state, left_lane_warning, right_lane_warning = process_hud_alert(CC.enabled, self.car_fingerprint,
                                                                                       hud_control)
 
+    # G70 2024: keep the camera's attention-warning chime request out of the LKAS11 that is sent to the car
+    stock_lkas11 = CS.lkas11
+    if self.car_fingerprint == CAR.GENESIS_G70_2024:
+      stock_lkas11, self.lkas11_basreq_state = hyundaican.lkas11_daw_filter(CS.lkas11, CS.lkas12, self.lkas11_basreq_state)
     can_sends.append(hyundaican.create_lkas11(self.packer, self.frame, self.CP, apply_torque, apply_steer_req,
-                                              torque_fault, CS.lkas11, sys_warning, sys_state, CC.enabled,
+                                              torque_fault, stock_lkas11, sys_warning, sys_state, CC.enabled,
                                               hud_control.leftLaneVisible, hud_control.rightLaneVisible,
                                               left_lane_warning, right_lane_warning,
                                               self.lkas_icon))

@@ -154,6 +154,35 @@ def lkas12_daw_filter(lkas12: dict, last_level: int) -> tuple[dict, int]:
   return values, last_level
 
 
+# The camera's LKAS11 carries CF_Lkas_FcwBasReq (byte 1 bit 7), which create_lkas11 copies to the car. On the
+# G70 2024 the camera sets it for the 4 s of a Driver Attention Warning (routes c4 and c6: 800 frames, all of them
+# inside or within 0.1 s of the LKAS12 warning), and the attention chime still played with the LKAS12 warning
+# removed. The bit is cleared while the camera's LKAS12 shows the warning. LKAS12 is a 10 Hz message and the bit
+# leads it by up to 0.1 s, so a newly set bit is also held back for LKAS11_BASREQ_HOLD_FRAMES; if no attention
+# warning has appeared by then it is passed on unchanged, in case the camera uses it for something else.
+LKAS11_BASREQ_HOLD_FRAMES = 20  # 0.2 s at 100 Hz
+LKAS11_BASREQ_DAW_LATCHED = -1
+
+
+def lkas11_daw_filter(lkas11: dict, lkas12: dict, state: int) -> tuple[dict, int]:
+  """Returns the camera's LKAS11 values with CF_Lkas_FcwBasReq cleared during a Driver Attention Warning, and the new state.
+
+  state: 0 bit not set; n > 0 frames since the bit was set without a warning; LKAS11_BASREQ_DAW_LATCHED once the
+  warning was seen while the bit was set (cleared until the camera drops the bit)."""
+  if not int(lkas11["CF_Lkas_FcwBasReq"]):
+    return lkas11, 0
+  daw = bool(lkas12) and (int(lkas12["CF_LkasDawStatus"]) == LKAS12_DAW_WARNING or bool(int(lkas12["CF_Lkas12_DawWarning"]) & LKAS12_DAW_WARNING_BIT))
+  if daw or state == LKAS11_BASREQ_DAW_LATCHED:
+    state = LKAS11_BASREQ_DAW_LATCHED
+  else:
+    state += 1
+    if state > LKAS11_BASREQ_HOLD_FRAMES:
+      return lkas11, state
+  values = dict(lkas11)
+  values["CF_Lkas_FcwBasReq"] = 0
+  return values, state
+
+
 def create_lkas12(packer, values):
   return packer.make_can_msg("LKAS12", 0, values)
 
