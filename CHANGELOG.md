@@ -1156,3 +1156,13 @@ Details: [docs/findings/2026-11-18-g70-smoothing-scc11-chime-curves.md](docs/fin
 - **Device (user request):** `TorqueControlTune` 1.0 → 0.0. Build and all other settings unchanged (`500ba91`). Not driven.
 - **Docs:** findings for 2026-11-17 evening to 2026-11-18 written; `curve_position.py` added.
 
+## 2026-11-18 (11:26–19:45Z): V0 with smoothing rejected, back to V1 with a controller-only delay
+
+- **Drives `000000c8`, `000000c9`** (`500ba91`, `LatControlTorqueV0`, smoothing `0.2 20 25`, delay fixed 0.33 s). **User: much worse.** Straight windows above 60 mph (307 s): lane RMS 1.35 / 1.01 / 0.78 / 0.93 / 0.60 cm at 0.1–0.2 / 0.2–0.3 / 0.3–0.45 / 0.45–0.7 / 0.7–1.0 Hz, the lowest 0.2–0.45 Hz values of any setup, but wheel 0.076 / 0.056 / 0.054 / 0.096 / 0.130 / 0.080° with the wheel and actual-lateral-acceleration peaks at 0.78 Hz (act/request gain 1.22, 90° lag, coherence 0.85 at 0.7–1.0 Hz). `c4` (V1, same smoothing): 0.024° at 0.7–1.0 Hz. Curves (14): lane swing 0.64 m against 0.46 m. **Reading:** V0 acts on the request at once while smoothing makes the model aim 0.2 s further ahead.
+- SCC11 re-send clean on both; no cruise-held stop. lagd's estimate fell from 0.247 to 0.232 s. Three `controlsMismatch` events in the first 3 s of `c9`, not investigated.
+- **`0c19976`** (pushed, installed): optional V1 gains from `/data/g70_v1_gains`; set to 0.9 / 0.2 and then removed before any drive, because a rough closed loop of V1 on the device gave a response of 0.67 at 0.35 Hz (stock 0.70) with 18 % more torque activity.
+- **Offline result (rough closed loop, plant gain 3.55, 0.2 s delay, 0.1 s lag, no friction, stock gains):** controller delay 0.53 / 0.43 / 0.33 / 0.25 s gives a response at 0.35 Hz of 0.70 at 40° lag / 0.78 at 34° / 0.83 at 32° / 0.88 at 27°, with unchanged torque activity. With smoothing the controller had been waiting 0.53 s; lagd measures about 0.23 s.
+- **`ee06954`** (pushed, installed 19:43Z, user request for a second adjustment): `/data/g70_lat_ctrl_delay` gives the lateral controller its own delay; set to 0.33 s. modeld unchanged. `TorqueControlTune` back to 1.0. Not driven.
+- **Tools:** route lists updated.
+- Tests not run.
+
