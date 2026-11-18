@@ -85,6 +85,22 @@ def read_lat_smooth_speeds(path: str = LAT_SMOOTH_FILE) -> tuple[float, float]:
   return v_lo, v_hi
 
 
+# A fourth number sets how much further ahead the model aims (and how much delay controlsd adds) at full
+# smoothing: "seconds v_lo v_hi lookahead". Stock ties this to the filter time. Offline, on the plans logged in
+# route c1, aiming further ahead made the request 10-15 % larger at 0.3-0.7 Hz; a 0.3 s filter with 0.2 s of
+# look-ahead left that band unchanged and removed more frame-to-frame jitter, at 9-15 degrees of lag. No fourth
+# number, or an unusable one, means the filter time (the previous behaviour).
+def read_lat_smooth_lookahead(default: float, path: str = LAT_SMOOTH_FILE) -> float:
+  try:
+    with open(path) as f:
+      value = float(f.read().split()[3])
+  except (OSError, ValueError, IndexError):
+    return default
+  if value != value:  # NaN
+    return default
+  return min(max(value, 0.0), LAT_SMOOTH_MAX)
+
+
 def lat_smooth_at(v_ego: float, seconds: float, v_lo: float, v_hi: float) -> float:
   if v_hi <= v_lo:
     return seconds
