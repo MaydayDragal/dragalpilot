@@ -20,6 +20,7 @@ from openpilot.selfdrive.controls.lib.latcontrol_curvature import LatControlCurv
 from openpilot.selfdrive.controls.lib.latcontrol_torque import LatControlTorque
 from openpilot.selfdrive.controls.lib.longcontrol import LongControl
 from openpilot.selfdrive.modeld.modeld import lat_smooth_lookahead
+from openpilot.sunnypilot.livedelay.helpers import read_lat_ctrl_delay
 from openpilot.selfdrive.locationd.helpers import PoseCalibrator, Pose
 
 from openpilot.sunnypilot.selfdrive.controls.controlsd_ext import ControlsExt
@@ -30,6 +31,8 @@ LaneChangeDirection = log.LaneChangeDirection
 
 ACTUATOR_FIELDS = tuple(car.CarControl.Actuators.schema.fields.keys())
 
+
+LAT_CTRL_DELAY = read_lat_ctrl_delay()  # dragalpilot: None unless /data/g70_lat_ctrl_delay exists
 
 class Controls(ControlsExt):
   def __init__(self) -> None:
@@ -145,6 +148,8 @@ class Controls(ControlsExt):
       new_desired_curvature = model_v2.action.desiredCurvature if CC.latActive else self.curvature
     self.desired_curvature, curvature_limited = clip_curvature(CS.vEgo, self.desired_curvature, new_desired_curvature, lp.roll)
     lat_delay = self.sm["lateralDelay"].lateralDelay + lat_smooth_lookahead(CS.vEgo)
+    if LAT_CTRL_DELAY is not None:  # dragalpilot: the controller's own delay, see read_lat_ctrl_delay
+      lat_delay = LAT_CTRL_DELAY
 
     actuators.curvature = self.desired_curvature
     steer, lateral_output, lac_log = self.LaC.update(CC.latActive, CS, self.VM, lp,

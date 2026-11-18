@@ -147,3 +147,24 @@ def read_v1_gains(default_kp: float, default_ki: float, path: str = V1_GAINS_FIL
     return default_kp, default_ki
   return min(max(kp, V1_KP_RANGE[0]), V1_KP_RANGE[1]), min(max(ki, V1_KI_RANGE[0]), V1_KI_RANGE[1])
 
+# dragalpilot (G70 2024): optional steering delay for the lateral controller alone, in seconds, read from a
+# one-line text file. Stock gives controlsd the published delay plus the smoothing look-ahead, the same value
+# modeld plans with. The v1 controller compares the car's response with the request that long ago; with the
+# delay fixed at 0.33 s and 0.2 s of smoothing that is 0.53 s, while the car answers in about 0.2-0.3 s. In a
+# rough closed loop, 0.53 s gave a response of 0.70 at 40 degrees of lag at 0.35 Hz and 0.33 s gave 0.83 at 32.
+# When the file exists controlsd uses this value instead; modeld is not affected. No file means stock.
+LAT_CTRL_DELAY_FILE = "/data/g70_lat_ctrl_delay"
+LAT_CTRL_DELAY_MIN = 0.1
+LAT_CTRL_DELAY_MAX = 0.6
+
+
+def read_lat_ctrl_delay(path: str = LAT_CTRL_DELAY_FILE) -> float | None:
+  try:
+    with open(path) as f:
+      value = float(f.read().strip())
+  except (OSError, ValueError):
+    return None
+  if value != value:  # NaN
+    return None
+  return min(max(value, LAT_CTRL_DELAY_MIN), LAT_CTRL_DELAY_MAX)
+
