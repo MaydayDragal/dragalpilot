@@ -1136,3 +1136,13 @@ Details: [docs/findings/2026-11-17-g70-crash-fix-v1-delay-creep.md](docs/finding
 - **Tools:** `scc11_resend_check.py`, `plan_dump.py`, `smooth_methods.py`; route lists updated.
 - Tests not run.
 
+## 2026-11-18 (01:39–02:40Z): drives on 0.3 / 0.2 smoothing, attention-warning chime traced to LKAS11
+
+- **Drives `000000c6`, `000000c7`** (`513f72b`; V1, 4.5 / 0.07, ramp 0.24, delay fixed 0.33 s, smoothing `0.3 20 25 0.2`, SCC11 filter file present). Straight windows above 60 mph (307 s): lane RMS 1.59 / 1.14 / 1.36 / 0.71 / 0.43 cm at 0.1–0.2 / 0.2–0.3 / 0.3–0.45 / 0.45–0.7 / 0.7–1.0 Hz (`c4`, 0.2 / 0.2: 2.26 / 1.20 / 1.12 / 0.80 / 0.47); wheel 0.079 / 0.073 / 0.109 / 0.069 / 0.033° (`c4`: 0.060 / 0.058 / 0.064 / 0.051 / 0.024); wheel peak now at 0.39 Hz. The 0.3–0.45 Hz band is worse than with 0.2 / 0.2, against the open-loop expectation. Curves (9): shortfall / peak 0.19, overshoot / peak 0.20. lagd's own estimate 0.236 → 0.247 s with the published delay fixed.
+- **Smoothing set back to `0.2 20 25`** (user request).
+- **SCC11:** re-send clean on both drives (every camera frame once, unchanged, counter step 1, no relay or cruise events). The camera never sent `SCCInfoDisplay` 4, so the filter was not exercised. Two caught `isotp` assertions from the firmware query at the start of `c7`; fingerprint normal.
+- **Attention warning (user report: chime at the bookmark, no text):** `c6` 266.7–270.7 s, camera LKAS12 status 6 with bit 44; the re-sent LKAS12 stayed at level 1, so the 11-13 text filter is confirmed in the car. The camera's LKAS11 had `CF_Lkas_FcwBasReq` (byte 1 bit 7) set 266.6–270.6 s and openpilot's LKAS11 on bus 0 carried it, because `create_lkas11` copies that signal. Over `c1`, `c4`–`c7` the camera set the bit on 800 frames (400 in `c4`, 400 in `c6`), all with the LKAS12 warning active or within 0.1 s before it; `CF_Lkas_SysWarning` is 15 on 61 % of frames and does not mark the warning.
+- **`500ba91`** (pushed to `sunnypilot/g70-scc11-filter`, installed 02:37Z, user request): `lkas11_daw_filter` clears the bit while the camera's LKAS12 shows the warning and holds a newly set bit for 0.2 s; a bit set for longer with no warning passes unchanged. That this bit sounds the chime is an inference. Not driven.
+- **Tools:** `lkas11_daw_scan.py`; route lists updated.
+- Tests not run.
+
