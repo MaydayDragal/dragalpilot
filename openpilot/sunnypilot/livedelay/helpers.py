@@ -125,3 +125,25 @@ def read_lat_delay_fixed(path: str = LAT_DELAY_FIXED_FILE) -> float | None:
   if value != value:  # NaN
     return None
   return min(max(value, LAT_DELAY_FIXED_MIN), LAT_DELAY_FIXED_MAX)
+
+# dragalpilot (G70 2024): optional feedback gains for the upstream (v1) torque controller, read from a one-line
+# text file "kp ki". Stock is 0.8 / 0.15; LatControlTorqueV0 uses 1.0 / 0.3. On this car v1 kept the wheel calmer
+# but had about 30 % more lane motion at 0.2-0.45 Hz than v0, and v0 rang at 0.8 Hz once request smoothing was
+# added. kp replaces only the high-speed end of the speed schedule (30 m/s and up, blending in from 15 m/s).
+# No file, or an unreadable one, means the stock gains.
+V1_GAINS_FILE = "/data/g70_v1_gains"
+V1_KP_RANGE = (0.5, 1.2)
+V1_KI_RANGE = (0.05, 0.4)
+
+
+def read_v1_gains(default_kp: float, default_ki: float, path: str = V1_GAINS_FILE) -> tuple[float, float]:
+  try:
+    with open(path) as f:
+      parts = f.read().split()
+    kp, ki = float(parts[0]), float(parts[1])
+  except (OSError, ValueError, IndexError):
+    return default_kp, default_ki
+  if kp != kp or ki != ki:  # NaN
+    return default_kp, default_ki
+  return min(max(kp, V1_KP_RANGE[0]), V1_KP_RANGE[1]), min(max(ki, V1_KI_RANGE[0]), V1_KI_RANGE[1])
+
