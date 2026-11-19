@@ -1179,3 +1179,19 @@ Details: [docs/findings/2026-11-19-g70-sway-tool-controller-delay.md](docs/findi
 - **Device (user-approved):** `/data/g70_v1_gains` = `0.6 0.15` (about 02:15Z on 2026-11-19), controller delay kept at 0.10 s. Not driven.
 - Tests not run. No sunnypilot code change in this period.
 
+## 2026-11-19 (02:30Z–23:50Z): friction ramp 0.40, stock-cruise baseline, first drive with openpilot longitudinal
+
+Details: [docs/findings/2026-11-19-g70-friction-ramp-openpilot-longitudinal.md](docs/findings/2026-11-19-g70-friction-ramp-openpilot-longitudinal.md).
+
+- **`d1`** (controller delay 0.10 s, V1 gain 0.6): wobble 15.7 per minute above 60 mph against 15.2 with the stock gain, busier at 45–56 mph. Driver: worse. Gain file removed, controller delay set to 0.20 s.
+- **`d2`, `d3`** (0.20 s): ping-pong 3.0, wobble 11.3 per minute; on 20 shared minutes with the 0.33 s drives, ping-pong 5.1 → 3.3 and wobble 5.5 → 12.6.
+- **`d4`** (0.20 s, friction ramp 0.24 → 0.40): on 9.5 shared minutes wobble 11.4 → 2.2, ping-pong 3.6 → 3.5. Driver: highway pretty good, low speed still hunts.
+- **`a9b83b1`** (installed): speed-dependent friction ramp; set to `0.24 0.40 20 25`.
+- **Stock-cruise baseline** from `c4`–`d4` (121 min cruising): gap 1.11 s on setting 1, 13 stops at 3.1 m, 7 of 13 restarts needing the pedal; openpilot's background planner asked for braking 3.0 s earlier on closing leads. Tools `extract_long.py`, `long_baseline.py`.
+- **`cca8ce7`, `4d4ddab`, `6658738`** (installed, panda reflashed to `5277014d…`): HDA11_MFC and LKAS12 stay blocked with openpilot longitudinal; LKAS12 re-sent in both modes.
+- **`AlphaLongitudinalEnabled` = 1** (user request).
+- **`d5`** (first drive with openpilot longitudinal, speed-dependent ramp): steering a little worse than `d4` (driver and same-road numbers); speed control without faults, but one stop 0.8 m behind a lead, engagement refused from the accelerate toggle, three gap settings, and 8.7 acceleration swings per minute with a lead against 1.8 stock. Tool `long_trace.py`.
+- **`87e6a9e`** (installed): optional following times with a fourth gap setting, extra lead distance, engagement from either toggle. Device: friction ramp back to flat `0.40`; `/data/g70_long_follow` = `1.05 1.25 1.45 1.75`, `/data/g70_long_stop_extra` = `2.0`, `/data/g70_long_engage_any` present. Not driven.
+- **Tools:** `sway.py` has 20–45, 45–60 and above 60 mph bands; its setup list was trimmed to eight.
+- Panda safety tests not run. No test covers the `selfdrived` and `controlsd` changes.
+

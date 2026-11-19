@@ -36,18 +36,18 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import load
 
 # setup label -> routes. Keep the labels short; the newest setup goes last. At most 8 (one colour each in the report);
-# c5 (smoothing ramp 25-45 mph, 15 short segments) was dropped to make room.
+# c5 (smoothing ramp 25-45 mph, 15 short segments) bc-be (V0 4.2/.07), c6-c7 (filter .3, look-ahead .2) d1 (gain 0.6) and b5 (V0 4.5/.05) were dropped to make room.
 SETUPS = {
-    "V0 4.5/.05 +.12": ["000000b5"],
-    "V0 4.2/.07": ["000000bc", "000000bd", "000000be"],
     "V1 no smoothing": ["000000c0", "000000c1", "000000c2", "000000c3"],
     "V1 smooth .2 all speeds": ["000000c4"],
-    "V1 filter .3 look .2": ["000000c6", "000000c7"],
     "V0 smooth .2": ["000000c8", "000000c9"],
     "V1 smooth .2 ctrl delay .33": ["000000ca", "000000cb", "000000cc"],
     "V1 smooth .2 ctrl delay .10": ["000000cd", "000000ce", "000000cf", "000000d0"],
+    "V1 smooth .2 ctrl delay .20": ["000000d2", "000000d3"],
+    "V1 ctrl delay .20 ramp .40": ["000000d4"],
+    "V1 ramp .24-.40, op long": ["000000d5"],
 }
-SPEEDS = (("35-60 mph", 15.6, 26.8), (">60 mph", 26.8, 99.0))
+SPEEDS = (("20-45 mph", 8.9, 20.1), ("45-60 mph", 20.1, 26.8), (">60 mph", 26.8, 99.0))
 HYST = 0.03       # m, reversals smaller than this do not end a swing
 BIG_CM = 15.0     # a swing this large is counted as "large"
 TRAIN_CM = 8.0    # minimum swing size inside a ping-pong train

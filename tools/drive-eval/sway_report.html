@@ -268,7 +268,7 @@ function drawMap() {
   }
   MLAYERS.forEach(l => l.remove()); MLAYERS = [];
   const add = l => { l.addTo(MAPOBJ); MLAYERS.push(l); }, name = i => D.setups[i].name, col = i => cssv(`--s${(i % 8) + 1}`), on = i => sel.has(name(i));
-  const lo = speed.startsWith(">") ? 60 : 35, hi = speed.startsWith(">") ? 999 : 60;
+  const sn = speed.match(/\d+/g).map(Number), lo = sn[0], hi = speed.startsWith(">") ? 999 : sn[1];
   if ($("m_trk").checked) M.tracks.forEach(t => add(L.polyline(t.pts, { color: on(t.s) ? col(t.s) : cssv("--muted"), weight: on(t.s) ? 3 : 2, opacity: on(t.s) ? 0.45 : 0.25, interactive: false })));
   let n = 0;
   if ($("m_pp").checked) M.pp.forEach(e => { if (!on(e[0]) || e[6] < lo || e[6] >= hi) return; n++;

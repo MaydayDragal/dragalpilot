@@ -91,3 +91,14 @@ Copy the `.pkl` files to the PC and delete `/data/tmp/ext` afterwards. A route i
 - **The report holds GPS positions.** It is written outside the repo; do not copy it in. Its map background is fetched from OpenStreetMap while it is open.
 - **Reading the verdict:** ping-pong with a long follow delay means the controller waits too long; wobble with a follow gain at or above 1 at 0.7-1 Hz means the car over-answers fast requests.
 
+## Speed control (longitudinal), added 2026-11-19
+
+| Script | Where | What it does |
+|---|---|---|
+| `extract_long.py <route> ...` | comma (offroad, writes `/data/tmp/extl/*.pkl`) | per segment: carState and carControl at 20 Hz, radarState lead, openpilot's longitudinal plan, the model's lead, the camera's SCC11 / SCC12 / FCA11 decoded at 25 Hz, GPS. About 0.7 MB per segment; 300 segments take about 10 minutes, so run it in the background for many routes. |
+| `long_baseline.py <dir> [route ...]` | PC | following gap per setting, comfort, hard braking, speed see-saw, set-speed holding, stops and restarts, driver take-overs, warnings, and openpilot's planner against the stock cruise's request. Route arguments limit it to those routes. |
+| `long_trace.py <route> <t0> <t1> [step]` | comma (piped, read-only) | time trace of speed control: speeds, set speed, engagement, acceleration command and plan, plan source, lead, with every cruise button press, event change and alert change |
+
+- With stock longitudinal, `a_req` in `long_baseline.py` is the car's own cruise request. With openpilot longitudinal it is still the camera's SCC12, which is no longer what drives the car; use `carControl.actuators.accel` (in the `cc` rows of the extract) for what was commanded.
+- `sway.py` now has three speed bands (20-45, 45-60, above 60 mph). Its `SETUPS` list is limited to eight; older setups were removed from it as newer ones were added (their numbers are in the findings).
+
