@@ -28,6 +28,7 @@ from openpilot.common.hardware import HARDWARE
 
 from openpilot.sunnypilot.mads.mads import ModularAssistiveDrivingSystem
 from openpilot.sunnypilot import get_sanitize_int_param
+from openpilot.sunnypilot.selfdrive.controls.lib import g70_long
 from openpilot.sunnypilot.selfdrive.car.car_specific import CarSpecificEventsSP
 from openpilot.sunnypilot.selfdrive.car.intelligent_cruise_button_management.controller import IntelligentCruiseButtonManagement
 from openpilot.sunnypilot.selfdrive.selfdrived.button_state_tracker import ButtonStateTracker
@@ -144,6 +145,17 @@ class SelfdriveD:
       max(log.LongitudinalPersonality.schema.enumerants.values()),
       self.params
     )
+    # dragalpilot: optional settings read once at start (see g70_long.py)
+    self.g70_engage_any = g70_long.engage_any_enabled()
+    g70_follow = g70_long.read_follow_table()
+    self.g70_four_gaps = g70_follow is not None and len(g70_follow) == 4
+    self.g70_gap = self.personality
+    self.g70_gap_t = 0.0
+    if self.g70_four_gaps:
+      gap = g70_long.read_gap()
+      if gap is not None and g70_long.gap_to_personality(gap) == self.personality:
+        self.g70_gap = gap
+      g70_long.write_gap(self.g70_gap)
     self.recalibrating_seen = False
     self.dm_lockout_set = False
     self.dm_uncertain_alerted = False
@@ -242,7 +254,7 @@ class SelfdriveD:
 
     # Block resume if cruise never previously enabled
     resume_pressed = any(be.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for be in CS.buttonEvents)
-    if not self.CP.pcmCruise and CS.vCruise > 250 and resume_pressed:
+    if not self.CP.pcmCruise and CS.vCruise > 250 and resume_pressed and not self.g70_engage_any:
       self.events.add(EventName.resumeBlocked)
 
     # Handle DM
@@ -514,7 +526,14 @@ class SelfdriveD:
     # Decrement personality on distance button press
     if self.CP.openpilotLongitudinalControl:
       if any(not be.pressed and be.type == ButtonType.gapAdjustCruise for be in CS.buttonEvents):
-        self.personality = (self.personality - 1) % 3
+        if self.g70_four_gaps:
+          # dragalpilot: four gap settings; 2 and 3 share the relaxed personality
+          self.g70_gap = (self.g70_gap - 1) % 4
+          self.g70_gap_t = time.monotonic()
+          g70_long.write_gap(self.g70_gap)
+          self.personality = g70_long.gap_to_personality(self.g70_gap)
+        else:
+          self.personality = (self.personality - 1) % 3
         self.params.put('LongitudinalPersonality', self.personality)
         self.events.add(EventName.personalityChanged)
 
@@ -660,6 +679,10 @@ class SelfdriveD:
       self.is_ldw_enabled = self.params.get_bool("IsLdwEnabled")
       self.disengage_on_accelerator = self.params.get_bool("DisengageOnAccelerator")
       self.personality = self.params.get("LongitudinalPersonality", return_default=True)
+      # dragalpilot: a personality chosen in the settings moves the gap setting with it (not within 1 s of a button press)
+      if self.g70_four_gaps and time.monotonic() - self.g70_gap_t > 1.0 and g70_long.gap_to_personality(self.g70_gap) != self.personality:
+        self.g70_gap = int(self.personality)
+        g70_long.write_gap(self.g70_gap)
 
       self.mads.read_params()
       time.sleep(0.1)

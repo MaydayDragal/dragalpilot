@@ -21,6 +21,7 @@ from openpilot.selfdrive.controls.lib.latcontrol_torque import LatControlTorque
 from openpilot.selfdrive.controls.lib.longcontrol import LongControl
 from openpilot.selfdrive.modeld.modeld import lat_smooth_lookahead
 from openpilot.sunnypilot.livedelay.helpers import read_lat_ctrl_delay
+from openpilot.sunnypilot.selfdrive.controls.lib import g70_long
 from openpilot.selfdrive.locationd.helpers import PoseCalibrator, Pose
 
 from openpilot.sunnypilot.selfdrive.controls.controlsd_ext import ControlsExt
@@ -32,6 +33,8 @@ LaneChangeDirection = log.LaneChangeDirection
 ACTUATOR_FIELDS = tuple(car.CarControl.Actuators.schema.fields.keys())
 
 
+_g70_follow = g70_long.read_follow_table()
+G70_GAP_READER = g70_long.GapReader() if _g70_follow is not None and len(_g70_follow) == 4 else None  # dragalpilot
 LAT_CTRL_DELAY = read_lat_ctrl_delay()  # dragalpilot: None unless /data/g70_lat_ctrl_delay exists
 
 class Controls(ControlsExt):
@@ -192,6 +195,8 @@ class Controls(ControlsExt):
     hudControl.lanesVisible = CC.enabled
     hudControl.leadVisible = self.sm['longitudinalPlan'].hasLead
     hudControl.leadDistanceBars = self.sm['selfdriveState'].personality.raw + 1
+    if G70_GAP_READER is not None:  # dragalpilot: four gap settings, see g70_long.py
+      hudControl.leadDistanceBars = G70_GAP_READER.get(self.sm['selfdriveState'].personality.raw) + 1
     hudControl.visualAlert = self.sm['selfdriveState'].alertHudVisual
 
     hudControl.rightLaneVisible = True
