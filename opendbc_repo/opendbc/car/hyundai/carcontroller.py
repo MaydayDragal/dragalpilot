@@ -198,9 +198,9 @@ class CarController(CarControllerBase, CcncCarController, EsccCarController, Lea
     if self.frame % 5 == 0 and self.CP.flags & HyundaiFlags.SEND_LFA.value:
       can_sends.append(hyundaican.create_lfahda_mfc(self.packer, CC.enabled, self.lfa_icon))
 
-    # 10 Hz LKAS12: the panda blocks the camera's copy (camera SCC, stock longitudinal), so re-send it with the
-    # Driver Attention Warning removed. Stop when the camera's own message is older than 0.5 s.
-    if self.car_fingerprint == CAR.GENESIS_G70_2024 and not self.CP.openpilotLongitudinalControl and CS.lkas12_ts_nanos > 0:
+    # 10 Hz LKAS12: the panda blocks the camera's copy (camera SCC, with stock or openpilot longitudinal), so
+    # re-send it with the Driver Attention Warning removed. Stop when the camera's own message is older than 0.5 s.
+    if self.car_fingerprint == CAR.GENESIS_G70_2024 and CS.lkas12_ts_nanos > 0:
       lkas12, self.lkas12_daw_level = hyundaican.lkas12_daw_filter(CS.lkas12, self.lkas12_daw_level)
       if self.frame % 10 == 0 and (self.now_nanos - CS.lkas12_ts_nanos) < 0.5e9:
         can_sends.append(hyundaican.create_lkas12(self.packer, lkas12))
