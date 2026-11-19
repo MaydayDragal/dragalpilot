@@ -14,3 +14,6 @@ qlog*
 *.npz
 __pycache__/
 .venv/
+
+# local tool settings (hold PC paths)
+.claude/

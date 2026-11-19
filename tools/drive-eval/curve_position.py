@@ -15,7 +15,8 @@ R = {}
 for D in sys.argv[2:]: R.update(load(D))
 G = {"V0 4.5/.05, delay ~0.30 (b5)": ["000000b5"], "V0 4.2, delay 0.31-0.34 (bc,bd,be)": ["000000bc", "000000bd", "000000be"],
      "V1 no smoothing, delay 0.35-0.37 (c0-c3)": ["000000c0", "000000c1", "000000c2", "000000c3"],
-     "V1 smoothing, delay 0.33 fixed (c4-c7)": ["000000c4", "000000c5", "000000c6", "000000c7"]}
+     "V1 smoothing, delay 0.33 fixed (c4-c7)": ["000000c4", "000000c5", "000000c6", "000000c7"],
+     "V0 smoothing (c8,c9)": ["000000c8", "000000c9"], "V1 smoothing, controller delay 0.33 (ca-cc)": ["000000ca", "000000cb", "000000cc"]}
 def runs(m, minlen):
     idx = np.flatnonzero(np.diff(np.r_[0, m.astype(int), 0])); return [(a, b) for a, b in zip(idx[::2], idx[1::2]) if b - a >= minlen]
 print("offset toward the inside of the curve, m (+ = inside of lane centre); delivered = actual / requested lateral acceleration mid-curve")

@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sway report</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f5f4f1; --surface: #fcfcfb; --line: #e3e2dd; --grid: #ebeae6;
+  --text: #0b0b0b; --text2: #52514e; --muted: #8a8983; --ghost: #cfcec8;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948;
+  --good: #0ca30c; --warning: #b97a00; --critical: #d03b3b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121211; --surface: #1a1a19; --line: #2e2e2b; --grid: #262624;
+    --text: #f0efec; --text2: #c3c2b7; --muted: #8f8e86; --ghost: #45453f;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #0ca30c; --s7: #9085e9; --s8: #e66767;
+    --good: #0ca30c; --warning: #fab219; --critical: #e66767;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 22px; margin: 0 0 2px; font-weight: 650; }
+h2 { font-size: 15px; margin: 32px 0 4px; font-weight: 650; }
+p.sub { margin: 0 0 12px; color: var(--text2); max-width: 78ch; }
+.meta { color: var(--muted); font-size: 12.5px; }
+.bar { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 10px 0; margin-top: 12px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface); color: var(--text2); padding: 6px 12px; font: inherit; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--text); color: var(--surface); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 12.5px; cursor: pointer; }
+.chip i { width: 10px; height: 10px; border-radius: 3px; background: var(--ghost); display: inline-block; }
+.chip[aria-pressed="true"] { color: var(--text); border-color: var(--muted); }
+.chip[aria-pressed="true"] i { background: var(--c); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-top: 16px; }
+.tile, .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.tile .k { color: var(--text2); font-size: 12.5px; }
+.tile .v { font-size: 28px; font-weight: 650; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.tile .d { color: var(--muted); font-size: 12.5px; }
+.reading { margin-top: 12px; padding: 12px 16px; border-left: 4px solid var(--warning); background: var(--surface); border-radius: 8px; }
+.reading.ok { border-color: var(--good); } .reading b { font-weight: 650; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; }
+.card h3 { margin: 0; font-size: 13.5px; font-weight: 650; } .card .note { color: var(--text2); font-size: 12.5px; margin: 2px 0 6px; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { fill: var(--text2); font-size: 11px; font-variant-numeric: tabular-nums; }
+svg .lab { fill: var(--text); } svg .dim { fill: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--text2); margin-top: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 5px; }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { color: var(--text2); font-weight: 600; } th:first-child, td:first-child { text-align: left; } td.why { text-align: left; white-space: normal; color: var(--text2); min-width: 300px; }
+.scroll { overflow-x: auto; }
+#tip { position: fixed; pointer-events: none; background: var(--text); color: var(--surface); padding: 6px 9px; border-radius: 6px; font-size: 12px; z-index: 20; display: none; max-width: 280px; }
+#map { height: 560px; border-radius: 8px; margin-top: 8px; background: var(--grid); }
+.mapopts { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12.5px; color: var(--text2); align-items: center; }
+.mapopts label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+.leaflet-container { font: inherit; }
+details { margin-top: 24px; } summary { cursor: pointer; color: var(--text2); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Sway report</h1>
+  <div class="meta" id="meta"></div>
+  <div class="bar">
+    <div class="seg" id="speed" role="group" aria-label="Speed range"></div>
+    <div class="chips" id="chips" role="group" aria-label="Setups shown in colour"></div>
+  </div>
+
+  <div class="tiles" id="tiles"></div>
+  <div class="reading" id="reading"></div>
+
+  <h2>Side-to-side swings on straights</h2>
+  <p class="sub" id="swsub"></p>
+  <div class="grid2"><div class="card" id="c_pp"></div><div class="card" id="c_wob"></div></div>
+  <div class="grid2" style="margin-top:12px"><div class="card" id="c_hist"></div><div class="card" id="c_trace"></div></div>
+
+  <h2>On the map</h2>
+  <p class="sub">Every ping-pong swing and wobble of the selected setups, where it happened. A repeat spot is a 100 m stretch where most drives swing whatever the setup: that points at the road or its lane markings, not the tune. Positions stay in this file; only the map background is fetched from OpenStreetMap.</p>
+  <div class="card">
+    <div class="mapopts">
+      <label><input type="checkbox" id="m_pp" checked><span class="dot" style="background:var(--s1)"></span>ping-pong swings (size = cm, colour = setup)</label>
+      <label><input type="checkbox" id="m_wob"><span class="dot" style="background:transparent;border:2px solid var(--text2)"></span>wobble (ring, colour = setup)</label>
+      <label><input type="checkbox" id="m_hot" checked><span class="dot" style="background:transparent;border:2px dashed var(--critical);border-radius:2px"></span>repeat spots</label>
+      <label><input type="checkbox" id="m_trk" checked>driven roads</label>
+      <span id="m_count"></span><span>Zoom with the + / − buttons or a double-click.</span>
+    </div>
+    <div id="map"></div>
+  </div>
+
+  <h2>Same road, setup against the reference</h2>
+  <p class="sub" id="samesub"></p>
+  <div class="grid2"><div class="card" id="c_same_pp"></div><div class="card" id="c_same_wob"></div></div>
+
+  <h2>Why: the steering loop by frequency</h2>
+  <p class="sub">Lane offset feeds the plan, the plan feeds the request, the car follows the request, and that moves the car in the lane. Ping-pong lives at 0.2&ndash;0.45&nbsp;Hz (one swing every 1&ndash;2.5&nbsp;s), wobble above 0.7&nbsp;Hz. Estimated from normal driving, so read the shapes more than single values.</p>
+  <div class="grid2">
+    <div class="card" id="c_amp"></div><div class="card" id="c_delay"></div>
+    <div class="card" id="c_gain"></div><div class="card" id="c_lane"></div>
+  </div>
+
+  <h2>All setups</h2>
+  <div class="card scroll"><table id="tbl"></table></div>
+  <details><summary>How to read this</summary>
+    <p class="sub">A swing is one move of the lane-centre offset from one turning point to the next (reversals under 3&nbsp;cm ignored). Its period is twice its duration. Ping-pong = period 2&ndash;5&nbsp;s; wander = slower than 5&nbsp;s; a train = four or more ping-pong swings in a row. Wobble = swings of lateral acceleration faster than 1.6&nbsp;s and at least 0.15&nbsp;m/s&sup2;. Follow delay = how late the car's lateral acceleration is behind the request. Amplification above 1 means the loop makes a lane disturbance at that frequency bigger.</p>
+  </details>
+</main>
+<div id="tip"></div>
+<script>
+const D = /*DATA*/null;
+const $ = id => document.getElementById(id);
+const COL = D.setups.map((s, i) => `var(--s${(i % 8) + 1})`);
+const idx = Object.fromEntries(D.setups.map((s, i) => [s.name, i]));
+let speed = D.speeds[D.speeds.length - 1];
+let sel = new Set([D.base, ...D.setups.map(s => s.name).filter(n => /smooth \.2 all|V0 smooth/.test(n))]);
+const f1 = v => v == null ? "–" : v.toFixed(1), f2 = v => v == null ? "–" : v.toFixed(2);
+const tip = $("tip");
+function showTip(e, html) { tip.innerHTML = html; tip.style.display = "block"; const x = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8); tip.style.left = x + "px"; tip.style.top = (e.clientY + 14) + "px"; }
+function hideTip() { tip.style.display = "none"; }
+function E(tag, attrs, parent) { const e = document.createElementNS("http://www.w3.org/2000/svg", tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+function head(el, title, note) { el.innerHTML = `<h3>${title}</h3><div class="note">${note || ""}</div>`; }
+function niceMax(m) { if (!(m > 0)) return 1; const p = Math.pow(10, Math.floor(Math.log10(m))); for (const k of [1, 1.5, 2, 3, 4, 5, 8, 10]) if (k * p >= m) return k * p; return 10 * p; }
+
+// horizontal bars: one value per setup
+function bars(el, title, note, rows, fmt, unit) {
+  head(el, title, note);
+  const W = 520, rh = 26, L = 178, R = 46, H = rows.length * rh + 22, max = niceMax(Math.max(...rows.map(r => r.v || 0)));
+  const svg = E("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": title }, el), x = v => L + (W - L - R) * v / max;
+  for (let i = 0; i <= 4; i++) { const v = max * i / 4; E("line", { x1: x(v), x2: x(v), y1: 0, y2: H - 20, stroke: "var(--grid)" }, svg); E("text", { x: x(v), y: H - 6, "text-anchor": "middle", class: "dim" }, svg).textContent = +v.toFixed(2); }
+  rows.forEach((r, i) => {
+    const y = i * rh + 4, on = sel.has(r.name);
+    E("text", { x: L - 8, y: y + 13, "text-anchor": "end", class: on ? "lab" : "dim" }, svg).textContent = r.name;
+    if (r.v == null) { E("text", { x: L + 4, y: y + 13, class: "dim" }, svg).textContent = "too little data"; return; }
+    const w = Math.max(x(r.v) - L, 1);
+    E("path", { d: `M${L},${y} h${Math.max(w - 4, 0)} a4,4 0 0 1 4,4 v10 a4,4 0 0 1 -4,4 h${-Math.max(w - 4, 0)} z`, fill: on ? COL[idx[r.name]] : "var(--ghost)" }, svg);
+    E("text", { x: x(r.v) + 6, y: y + 13, class: on ? "lab" : "dim" }, svg).textContent = fmt(r.v);
+    const hit = E("rect", { x: 0, y, width: W, height: rh - 4, fill: "transparent" }, svg);
+    hit.addEventListener("mousemove", e => showTip(e, `<b>${r.name}</b><br>${fmt(r.v)} ${unit}${r.extra ? "<br>" + r.extra : ""}`)); hit.addEventListener("mouseleave", hideTip);
+  });
+}
+
+// lines over a categorical x axis: one line per setup, selected in colour
+function lines(el, title, note, xl, series, fmt, opt = {}) {
+  head(el, title, note);
+  const W = 520, H = 240, L = 40, R = 14, T = 10, B = 34;
+  const vals = series.flatMap(s => s.v).filter(v => v != null); let max = niceMax(Math.max(...vals, opt.ref || 0)), min = Math.min(0, ...vals); if (min < 0) min = -niceMax(-min);
+  const svg = E("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": title }, el);
+  const x = i => L + (W - L - R) * (xl.length === 1 ? 0.5 : i / (xl.length - 1)), y = v => T + (H - T - B) * (1 - (v - min) / (max - min));
+  for (let i = 0; i <= 4; i++) { const v = min + (max - min) * i / 4; E("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: "var(--grid)" }, svg); E("text", { x: L - 6, y: y(v) + 4, "text-anchor": "end", class: "dim" }, svg).textContent = +v.toFixed(2); }
+  if (opt.band) E("rect", { x: x(opt.band[0]) - 14, y: T, width: x(opt.band[1]) - x(opt.band[0]) + 28, height: H - T - B, fill: "var(--grid)", opacity: .7 }, svg);
+  if (opt.band) E("text", { x: (x(opt.band[0]) + x(opt.band[1])) / 2, y: T + 12, "text-anchor": "middle", class: "dim" }, svg).textContent = opt.bandLabel;
+  if (opt.ref != null) { E("line", { x1: L, x2: W - R, y1: y(opt.ref), y2: y(opt.ref), stroke: "var(--muted)", "stroke-dasharray": "4 4" }, svg); E("text", { x: W - R, y: y(opt.ref) - 5, "text-anchor": "end", class: "dim" }, svg).textContent = opt.refLabel; }
+  xl.forEach((l, i) => E("text", { x: x(i), y: H - 16, "text-anchor": "middle", class: "dim" }, svg).textContent = l);
+  E("text", { x: (L + W - R) / 2, y: H - 2, "text-anchor": "middle", class: "dim" }, svg).textContent = opt.xTitle || "";
+  const draw = (s, on) => {
+    const pts = s.v.map((v, i) => v == null ? null : [x(i), y(v)]).filter(Boolean); if (!pts.length) return;
+    E("polyline", { points: pts.map(p => p.join(",")).join(" "), fill: "none", stroke: on ? COL[idx[s.name]] : "var(--ghost)", "stroke-width": on ? 2 : 1, "stroke-linejoin": "round" }, svg);
+    if (on) pts.forEach(p => E("circle", { cx: p[0], cy: p[1], r: 3.5, fill: COL[idx[s.name]], stroke: "var(--surface)", "stroke-width": 2 }, svg));
+  };
+  series.filter(s => !sel.has(s.name)).forEach(s => draw(s, false)); series.filter(s => sel.has(s.name)).forEach(s => draw(s, true));
+  const guide = E("line", { y1: T, y2: H - B, stroke: "var(--muted)", "stroke-width": 1, visibility: "hidden" }, svg);
+  const hit = E("rect", { x: L - 14, y: T, width: W - L - R + 28, height: H - T - B, fill: "transparent" }, svg);
+  hit.addEventListener("mousemove", e => {
+    const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * W; let i = Math.round((px - L) / (W - L - R) * (xl.length - 1)); i = Math.max(0, Math.min(xl.length - 1, i));
+    guide.setAttribute("x1", x(i)); guide.setAttribute("x2", x(i)); guide.setAttribute("visibility", "visible");
+    const rows = series.filter(s => sel.has(s.name) && s.v[i] != null).sort((a, b) => b.v[i] - a.v[i]).map(s => `<span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${COL[idx[s.name]]};margin-right:5px"></span>${s.name}: <b>${fmt(s.v[i])}</b>`);
+    showTip(e, `${xl[i]} ${opt.xUnit || ""}<br>` + (rows.join("<br>") || "no setup selected"));
+  });
+  hit.addEventListener("mouseleave", () => { hideTip(); guide.setAttribute("visibility", "hidden"); });
+  legend(el, series.filter(s => sel.has(s.name)).map(s => s.name));
+}
+function legend(el, names) { const d = document.createElement("div"); d.className = "legend"; d.innerHTML = names.map(n => `<span><i style="background:${COL[idx[n]]}"></i>${n}</span>`).join("") + (names.length < D.setups.length ? `<span><i style="background:var(--ghost)"></i>other setups</span>` : ""); el.appendChild(d); }
+
+// paired bars: earlier setup against the reference on shared road
+function pairs(el, title, note, key, fmt, unit) {
+  head(el, title, note);
+  if (!D.same.length) { el.insertAdjacentHTML("beforeend", `<div class="note">No shared road found.</div>`); return; }
+  const W = 520, rh = 40, L = 178, R = 46, H = D.same.length * rh + 22, max = niceMax(Math.max(...D.same.flatMap(r => [r.a[key], r.b[key]])));
+  const svg = E("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": title }, el), x = v => L + (W - L - R) * v / max;
+  for (let i = 0; i <= 4; i++) { const v = max * i / 4; E("line", { x1: x(v), x2: x(v), y1: 0, y2: H - 20, stroke: "var(--grid)" }, svg); E("text", { x: x(v), y: H - 6, "text-anchor": "middle", class: "dim" }, svg).textContent = +v.toFixed(2); }
+  D.same.forEach((r, i) => {
+    const y = i * rh + 4;
+    E("text", { x: L - 8, y: y + 12, "text-anchor": "end", class: "lab" }, svg).textContent = r.setup;
+    E("text", { x: L - 8, y: y + 26, "text-anchor": "end", class: "dim" }, svg).textContent = `${r.mins.toFixed(1)} min shared`;
+    [[r.a[key], COL[idx[r.setup]], r.setup], [r.b[key], COL[idx[D.base]], D.base]].forEach(([v, c, n], j) => {
+      const yy = y + j * 15, w = Math.max(x(v) - L, 1);
+      E("path", { d: `M${L},${yy} h${Math.max(w - 3, 0)} a3,3 0 0 1 3,3 v7 a3,3 0 0 1 -3,3 h${-Math.max(w - 3, 0)} z`, fill: c }, svg);
+      E("text", { x: x(v) + 6, y: yy + 11, class: "lab" }, svg).textContent = fmt(v);
+    });
+    const hit = E("rect", { x: 0, y, width: W, height: rh - 6, fill: "transparent" }, svg);
+    hit.addEventListener("mousemove", e => showTip(e, `On ${r.mins.toFixed(1)} min of shared road<br>${r.setup}: <b>${fmt(r.a[key])}</b> ${unit}<br>${D.base}: <b>${fmt(r.b[key])}</b> ${unit}`)); hit.addEventListener("mouseleave", hideTip);
+  });
+  const d = document.createElement("div"); d.className = "legend"; d.innerHTML = `<span>upper bar: the named setup</span><span><i style="background:${COL[idx[D.base]]}"></i>lower bar: ${D.base} on the same road</span>`; el.appendChild(d);
+}
+
+// example traces: small multiples sharing one y scale
+function traces(el, res) {
+  head(el, "Busiest 45 s on a straight", "Lane-centre offset relative to the car, cm (slow drift removed). One panel per selected setup, same scale.");
+  const names = D.setups.map(s => s.name).filter(n => sel.has(n) && res[n] && res[n].s.trace);
+  if (!names.length) { el.insertAdjacentHTML("beforeend", `<div class="note">Select a setup with data.</div>`); return; }
+  const W = 520, ph = 74, L = 40, R = 10, H = names.length * ph + 18, m = niceMax(Math.max(...names.flatMap(n => res[n].s.trace.map(Math.abs))));
+  const svg = E("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Example lane-offset traces" }, el);
+  names.forEach((n, k) => {
+    const t = res[n].s.trace, y0 = k * ph + ph / 2, x = i => L + (W - L - R) * i / (t.length - 1), y = v => y0 - (ph / 2 - 8) * v / m;
+    E("line", { x1: L, x2: W - R, y1: y0, y2: y0, stroke: "var(--grid)" }, svg);
+    E("text", { x: L - 6, y: y(m) + 4, "text-anchor": "end", class: "dim" }, svg).textContent = "+" + m; E("text", { x: L - 6, y: y(-m) + 4, "text-anchor": "end", class: "dim" }, svg).textContent = "−" + m;
+    E("polyline", { points: t.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" "), fill: "none", stroke: COL[idx[n]], "stroke-width": 2, "stroke-linejoin": "round" }, svg);
+    E("text", { x: L + 4, y: k * ph + 11, class: "lab" }, svg).textContent = n;
+    const hit = E("rect", { x: L, y: k * ph, width: W - L - R, height: ph, fill: "transparent" }, svg);
+    hit.addEventListener("mousemove", e => { const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * W; const i = Math.max(0, Math.min(t.length - 1, Math.round((px - L) / (W - L - R) * (t.length - 1)))); showTip(e, `<b>${n}</b><br>${(i / 10).toFixed(1)} s: ${t[i].toFixed(1)} cm`); });
+    hit.addEventListener("mouseleave", hideTip);
+  });
+  [0, 15, 30, 45].forEach(s => E("text", { x: L + (W - L - R) * s / 45, y: H - 4, "text-anchor": s === 0 ? "start" : s === 45 ? "end" : "middle", class: "dim" }, svg).textContent = s + " s");
+}
+
+function render() {
+  const res = D.res[speed] || {}, names = D.setups.map(s => s.name), b = res[D.base];
+  $("meta").textContent = `Generated ${D.generated} · reference setup: ${D.base} · drives: ${D.setups.map(s => s.routes.join(" ")).join(" ")}`;
+  $("speed").innerHTML = ""; D.speeds.forEach(s => { const bt = document.createElement("button"); bt.textContent = s; bt.setAttribute("aria-pressed", s === speed); bt.onclick = () => { speed = s; render(); }; $("speed").appendChild(bt); });
+  $("chips").innerHTML = ""; names.forEach(n => { const c = document.createElement("button"); c.className = "chip"; c.style.setProperty("--c", COL[idx[n]]); c.setAttribute("aria-pressed", sel.has(n)); c.innerHTML = `<i></i>${n}`; c.onclick = () => { sel.has(n) ? sel.delete(n) : sel.add(n); render(); }; $("chips").appendChild(c); });
+  // tiles for the reference (newest) setup
+  const best = k => { const v = names.filter(n => res[n] && n !== D.base).map(n => [res[n].s[k], n]).filter(x => x[0] != null).sort((a, c) => a[0] - c[0])[0]; return v ? `best other: ${v[0].toFixed(1)} (${v[1]})` : ""; };
+  const hb = b && b.bands ? b.bands.filter(x => x.lo >= 0.2 && x.lo < 0.45) : null;
+  $("tiles").innerHTML = !b ? `<div class="tile"><div class="k">${D.base}</div><div class="d">too little data at ${speed}</div></div>` : [
+    ["Ping-pong swings per minute", f1(b.s.pp), best("pp")], ["Wobble swings per minute", f1(b.s.wob), best("wob")],
+    ["Follow delay, 0.2–0.45 Hz", hb ? f2(hb.reduce((a, x) => a + x.delay, 0) / hb.length) + " s" : "–", "how late the car is behind the request"],
+    ["Largest amplification, 0.2–0.45 Hz", hb ? "×" + f2(Math.max(...hb.map(x => x.amp))) : "–", "above 1 the loop makes sway bigger"],
+  ].map(t => `<div class="tile"><div class="k">${t[0]}</div><div class="v">${t[1]}</div><div class="d">${t[2]}</div></div>`).join("");
+  const v = D.verdict.find(x => x.setup === D.base);
+  $("reading").className = "reading" + (v && v.why === "balanced" ? " ok" : ""); $("reading").innerHTML = v ? `<b>${D.base}, above 60 mph:</b> ${v.why}.` : "No verdict: too little data above 60 mph.";
+  $("swsub").textContent = `Counted on straight stretches with steering active and hands off, ${speed}. Swings of at least ${D.train_cm} cm. Coloured setups are the ones selected above.`;
+  const row = k => names.map(n => ({ name: n, v: res[n] ? res[n].s[k] : null, extra: res[n] ? `${res[n].s.mins.toFixed(1)} min of straights` : "" }));
+  bars($("c_pp"), "Ping-pong: swings per minute", "Side-to-side moves with a 2–5 s period. Lower is better.", row("pp"), f1, "per min");
+  bars($("c_wob"), "Wobble: fast swings per minute", "Lateral-acceleration swings faster than 1.6 s. Lower is better.", row("wob"), f1, "per min");
+  const pl = D.pbins.slice(0, -1).map((a, i) => `${a}–${D.pbins[i + 1]}`);
+  lines($("c_hist"), "Swings by period", "Swings per minute in each period range. Ping-pong range shaded.", pl, names.filter(n => res[n]).map(n => ({ name: n, v: res[n].s.hist })), f2, { xTitle: "period of the swing, s", xUnit: "s", band: [2, 6], bandLabel: "ping-pong" });
+  traces($("c_trace"), res);
+  $("samesub").textContent = `Only stretches of road (about 100 m cells, same direction, above 35 mph) driven by both the named setup and ${D.base}, so the roads cancel out. This is the fairest comparison in the report.`;
+  pairs($("c_same_pp"), "Ping-pong swings per minute, same road", "", "pp", f1, "per min");
+  pairs($("c_same_wob"), "Wobble swings per minute, same road", "", "wob", f1, "per min");
+  const bs = k => names.filter(n => res[n] && res[n].bands).map(n => ({ name: n, v: res[n].bands.map(x => x[k]) }));
+  const o = { xTitle: "frequency band, Hz", xUnit: "Hz", band: [1, 2], bandLabel: "ping-pong" };
+  lines($("c_amp"), "Loop amplification", "Above 1 the loop magnifies a lane disturbance at that frequency.", D.bands, bs("amp"), v => "×" + f2(v), { ...o, ref: 1, refLabel: "no amplification" });
+  lines($("c_delay"), "Follow delay", "Seconds the car's lateral acceleration is behind the request.", D.bands, bs("delay"), v => f2(v) + " s", o);
+  lines($("c_gain"), "Follow gain", "Car's response divided by the request. Above 1 at 0.7–1 Hz is the wobble.", D.bands, bs("gain"), f2, { ...o, ref: 1, refLabel: "follows exactly" });
+  lines($("c_lane"), "Lane-offset movement", "Centimetres RMS of lane-centre offset in each band, straights only.", D.bands, bs("lane"), v => f2(v) + " cm", o);
+  $("tbl").innerHTML = `<tr><th>Setup (${speed})</th><th>Straights min</th><th>Wander /min</th><th>Ping-pong /min</th><th>≥ ${D.big_cm} cm /min</th><th>Typical period s</th><th>% time in trains</th><th>Wobble /min</th><th>Wheel reversals /min</th><th>Reading (&gt; 60 mph)</th></tr>` +
+    names.map(n => { const r = res[n], vv = D.verdict.find(x => x.setup === n); return r ? `<tr><td>${n}</td><td>${f1(r.s.mins)}</td><td>${f1(r.s.wander)}</td><td>${f1(r.s.pp)}</td><td>${f2(r.s.ppbig)}</td><td>${f1(r.s.per)}</td><td>${f1(r.s.trainpct)}</td><td>${f1(r.s.wob)}</td><td>${r.s.rev == null ? "–" : r.s.rev.toFixed(0)}</td><td class="why">${vv ? vv.why : ""}</td></tr>` : `<tr><td>${n}</td><td colspan="9" class="why">too little data at this speed</td></tr>`; }).join("");
+}
+// ---- map
+let MAPOBJ = null, MLAYERS = [];
+function cssv(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function drawMap() {
+  const M = D.map; if (!window.L || !M) { $("map").innerHTML = '<div style="padding:16px;color:var(--text2)">Map library not loaded (offline?). The other sections are unaffected.</div>'; return; }
+  if (!MAPOBJ) {
+    MAPOBJ = L.map("map", { preferCanvas: true, scrollWheelZoom: false });
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }).addTo(MAPOBJ);
+    const all = M.tracks.flatMap(t => t.pts); if (all.length) MAPOBJ.fitBounds(L.latLngBounds(all).pad(0.05)); else MAPOBJ.setView([0, 0], 2);
+    ["m_pp", "m_wob", "m_hot", "m_trk"].forEach(id => $(id).onchange = drawMap);
+  }
+  MLAYERS.forEach(l => l.remove()); MLAYERS = [];
+  const add = l => { l.addTo(MAPOBJ); MLAYERS.push(l); }, name = i => D.setups[i].name, col = i => cssv(`--s${(i % 8) + 1}`), on = i => sel.has(name(i));
+  const lo = speed.startsWith(">") ? 60 : 35, hi = speed.startsWith(">") ? 999 : 60;
+  if ($("m_trk").checked) M.tracks.forEach(t => add(L.polyline(t.pts, { color: on(t.s) ? col(t.s) : cssv("--muted"), weight: on(t.s) ? 3 : 2, opacity: on(t.s) ? 0.45 : 0.25, interactive: false })));
+  let n = 0;
+  if ($("m_pp").checked) M.pp.forEach(e => { if (!on(e[0]) || e[6] < lo || e[6] >= hi) return; n++;
+    add(L.circleMarker([e[2], e[3]], { radius: Math.min(4 + (e[4] - D.train_cm) * 0.55, 16), color: cssv("--surface"), weight: 1.5, fillColor: col(e[0]), fillOpacity: 0.85 })
+      .bindTooltip(`<b>${name(e[0])}</b> (drive ${e[1]})<br>ping-pong swing ${e[4]} cm, period ${e[5]} s<br>${e[6]} mph, ${e[7] ? "straight" : "in a curve"}`)); });
+  if ($("m_wob").checked) M.wob.forEach(e => { if (!on(e[0]) || e[5] < lo || e[5] >= hi) return;
+    add(L.circleMarker([e[2], e[3]], { radius: 5, color: col(e[0]), weight: 2, fill: false }).bindTooltip(`<b>${name(e[0])}</b> (drive ${e[1]})<br>wobble ${e[4]} m/s², ${e[5]} mph`)); });
+  if ($("m_hot").checked) M.hot.forEach(h => add(L.rectangle([[h[0] - 0.0005, h[1] - 0.0005], [h[0] + 0.0005, h[1] + 0.0005]], { color: cssv("--critical"), weight: 2, dashArray: "5 4", fill: false })
+    .bindTooltip(`<b>Repeat spot</b><br>${h[2]} of ${h[3]} drives swing here, across ${h[4]} setups<br>likely the road or its markings`)));
+  $("m_count").textContent = `${n} ping-pong swings shown at ${speed} · ${M.hot.length} repeat spots`;
+}
+const render0 = render; render = function () { render0(); drawMap(); };
+render();
+</script>
+</body>
+</html>

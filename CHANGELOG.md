@@ -1166,3 +1166,16 @@ Details: [docs/findings/2026-11-18-g70-smoothing-scc11-chime-curves.md](docs/fin
 - **Tools:** route lists updated.
 - Tests not run.
 
+## 2026-11-18 (19:45Z) to 2026-11-19 (02:30Z): sway tool, controller delay 0.33 s then 0.10 s, V1 gain 0.6
+
+Details: [docs/findings/2026-11-19-g70-sway-tool-controller-delay.md](docs/findings/2026-11-19-g70-sway-tool-controller-delay.md).
+
+- **Drives `000000ca`–`000000cc`** (controller delay 0.33 s). On the roads shared with `c4` (stock controller delay): ping-pong 3.6 against 3.4 swings per minute, wobble 3.4 against 2.6. No measurable change. A first reading that this setup was busier compared different roads and is withdrawn.
+- **Cluster "hands not detected"** (bookmark in `cb`): openpilot's "Touch Steering Wheel: No Face Detected" alert, sent as LKAS11 `CF_Lkas_SysWarning` 4. Not filtered.
+- **SCC11 filter:** first cruise-held stop on `cb`; 82 s of camera `SCCInfoDisplay` 4 sent as 0, re-send clean. Driver confirmation of the cluster and of pulling away is pending.
+- **`tools/drive-eval/sway.py`** with `sway_report.html`: swing, train and wobble counts, who-moves split, loop estimate per band, same-road comparison, verdict, and a report page with graphs and a map. `bookmark_context.py` added. Route lists updated in `weave.py`, `compare.py`, `compare_req.py`, `curve_position.py`.
+- **Device (user-approved):** `/data/g70_lat_ctrl_delay` 0.33 → 0.10 (about 22:30Z).
+- **Drives `000000cd`–`000000d0`** (controller delay 0.10 s), above 60 mph: ping-pong 5.0 → 1.0 per minute, wobble 5.7 → 15.2, follow delay 0.66 → 0.53 s, follow gain at 0.7–1 Hz 0.65 → 1.20. Same road (7.6 min): ping-pong 5.3 → 2.7, wobble 7.2 → 15.2. Only 5.8 min of hands-off straights.
+- **Device (user-approved):** `/data/g70_v1_gains` = `0.6 0.15` (about 02:15Z on 2026-11-19), controller delay kept at 0.10 s. Not driven.
+- Tests not run. No sunnypilot code change in this period.
+

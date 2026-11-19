@@ -80,3 +80,14 @@ Copy the `.pkl` files to the PC and delete `/data/tmp/ext` afterwards. A route i
 - **Signs:** model lane-line `y` is positive to the right (the left line is negative), and `controlsState.desiredCurvature` is positive for a right curve (correlation with `steeringAngleDeg` −0.93 on `c1`).
 - **Echo sources in `can`:** `src` 128 + bus is a frame the panda put on that bus, forwarded frames included; `src` 192 + bus is a frame openpilot asked for that the panda rejected.
 
+## Added 2026-11-19
+
+| Script | Where | What it does |
+|---|---|---|
+| `sway.py <dir> ...` | PC | sway, ping-pong and wobble report per setup: swing and train counts, who moves, loop estimate per band, same-road comparison, verdict. Writes `sway-latest.html` and a dated copy (graphs and a map) to `../sway` beside the extracts and opens it. `NO_OPEN=1`, `SWAY_OUT=<folder>`, `BASE="<setup label>"`. Edit `SETUPS` for new drives (at most 8). |
+| `sway_report.html` | | template of that report; the data is inserted by `sway.py` |
+| `bookmark_context.py <route> ...` | comma (piped, read-only) | for every bookmark: openpilot alerts, HUD alert, hands-on state and every field of LKAS11, LFAHDA_MFC, HDA11_MFC, LKAS12 and MDPS12 that changed in the `WIN` seconds before it, as the camera sent them and as they went to the car |
+
+- **The report holds GPS positions.** It is written outside the repo; do not copy it in. Its map background is fetched from OpenStreetMap while it is open.
+- **Reading the verdict:** ping-pong with a long follow delay means the controller waits too long; wobble with a follow gain at or above 1 at 0.7-1 Hz means the car over-answers fast requests.
+
