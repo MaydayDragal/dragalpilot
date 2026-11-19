@@ -9,7 +9,7 @@ from opendbc.sunnypilot.car.interfaces import LatControlInputs
 from opendbc.sunnypilot.car.lateral_ext import get_friction as get_friction_in_torque_space
 from openpilot.common.params import Params
 
-from openpilot.sunnypilot.livedelay.helpers import read_friction_threshold
+from openpilot.sunnypilot.livedelay.helpers import friction_threshold_at, read_friction_threshold_schedule
 from openpilot.sunnypilot.selfdrive.controls.lib.latcontrol_torque_ext_base import LatControlTorqueExtBase
 
 
@@ -20,7 +20,7 @@ class LatControlTorqueJerkAware(LatControlTorqueExtBase):
     self._jerk_aware_enabled = self.params.get_bool("LateralJerkTorqueController")
     # dragalpilot: read here, not from lac_torque. The host controller can be LatControlTorqueV0
     # (EnforceTorqueControl off, or TorqueControlTune 0.0), which has no friction_threshold attribute.
-    self.friction_threshold = read_friction_threshold(FRICTION_THRESHOLD)
+    self.friction_threshold_schedule = read_friction_threshold_schedule(FRICTION_THRESHOLD)
 
   def update_limits(self):
     if not self._jerk_aware_enabled:
@@ -44,6 +44,7 @@ class LatControlTorqueJerkAware(LatControlTorqueExtBase):
     )
 
     friction_input = self.update_friction_input(self._desired_lateral_accel, self._actual_lateral_accel)
-    self._ff += get_friction_in_torque_space(friction_input, self._lateral_accel_deadzone, self.friction_threshold, self.torque_params)
+    friction_threshold = friction_threshold_at(CS.vEgo, self.friction_threshold_schedule)
+    self._ff += get_friction_in_torque_space(friction_input, self._lateral_accel_deadzone, friction_threshold, self.torque_params)
 
     self.update_output_torque(CS)

@@ -44,12 +44,38 @@ FRICTION_THRESHOLD_MAX = 0.6
 def read_friction_threshold(default: float, path: str = FRICTION_THRESHOLD_FILE) -> float:
   try:
     with open(path) as f:
-      value = float(f.read().strip())
-  except (OSError, ValueError):
+      value = float(f.read().split()[0])
+  except (OSError, ValueError, IndexError):
     return default
   if value != value:  # NaN
     return default
   return min(max(value, default), FRICTION_THRESHOLD_MAX)
+
+
+# The same file may carry three more numbers, "low high v_lo v_hi" (speeds in m/s): the ramp is `low` below v_lo,
+# `high` above v_hi and linear in between. On the car, with a 0.20 s controller delay, widening the ramp from 0.24
+# to 0.40 cut the fast wobble above 60 mph from 11.4 to 2.2 swings per minute on the same roads, while below
+# 35 mph the lane swings grew (3.8 cm against 2.0 cm in 0.2-0.7 Hz, on about 1.5 minutes of data): at low speed
+# the wheel turns several times further for the same correction and needs the help for small errors.
+# One number, or unusable extra numbers, means that one value at every speed (the previous behaviour).
+def read_friction_threshold_schedule(default: float, path: str = FRICTION_THRESHOLD_FILE) -> tuple[float, float, float, float]:
+  low = read_friction_threshold(default, path)
+  try:
+    with open(path) as f:
+      parts = f.read().split()
+    high, v_lo, v_hi = float(parts[1]), float(parts[2]), float(parts[3])
+  except (OSError, ValueError, IndexError):
+    return low, low, 0.0, 0.0
+  if high != high or v_lo != v_lo or v_hi != v_hi or v_lo < 0.0 or v_hi <= v_lo:
+    return low, low, 0.0, 0.0
+  return low, min(max(high, default), FRICTION_THRESHOLD_MAX), v_lo, v_hi
+
+
+def friction_threshold_at(v_ego: float, schedule: tuple[float, float, float, float]) -> float:
+  low, high, v_lo, v_hi = schedule
+  if v_hi <= v_lo:
+    return low
+  return low + (high - low) * min(max((v_ego - v_lo) / (v_hi - v_lo), 0.0), 1.0)
 
 # dragalpilot (G70 2024): optional smoothing of the model's steering request, in seconds, read from a one-line
 # text file on the device. modeld low-passes desiredCurvature with this time constant and, as upstream intends
