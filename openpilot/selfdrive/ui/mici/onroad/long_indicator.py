@@ -4,6 +4,7 @@ from openpilot.common.filter_simple import FirstOrderFilter
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.widgets import Widget
+from openpilot.sunnypilot.selfdrive.controls.lib import g70_long
 
 HIGHLIGHT_TIME = 2.5  # seconds
 
@@ -15,11 +16,23 @@ class LongIndicator(Widget):
     self._txt_distance = [(self._texture('distance_1', 32, 7), self._texture('distance_1_green', 60, 35)),
                           (self._texture('distance_2', 40, 9), self._texture('distance_2_green', 68, 37)),
                           (self._texture('distance_3', 48, 11), self._texture('distance_3_green', 76, 39))]
+    self._distance_y: tuple[float, ...] = (122, 136, 152)
+    # dragalpilot: with four gap settings (see g70_long.py), the three stock bars at their stock sizes plus one
+    # smaller bar above them. Bars are 5, 7, 9 and 11 px tall with 4 px between each pair (the three-bar layout
+    # has 6 px); the stack runs from y 118 to 162, 4.5 px lower than stock and clear of the wheel icon below.
+    follow_table = g70_long.read_follow_table()
+    self._gap_reader = g70_long.GapReader() if follow_table is not None and len(follow_table) == 4 else None
+    if self._gap_reader is not None:
+      self._txt_distance = [(self._texture('distance_1', 24, 5), self._texture('distance_1_green', 52, 33)),
+                            (self._texture('distance_1', 32, 7), self._texture('distance_1_green', 60, 35)),
+                            (self._texture('distance_2', 40, 9), self._texture('distance_2_green', 68, 37)),
+                            (self._texture('distance_3', 48, 11), self._texture('distance_3_green', 76, 39))]
+      self._distance_y = (120.5, 130.5, 142.5, 156.5)
     self._alpha_filter = FirstOrderFilter(0.0, 0.05, 1 / gui_app.target_fps)
     # crossfade between states, a white and a green filter per icon
     self._lead_car_filters = (FirstOrderFilter(0.0, 0.1, 1 / gui_app.target_fps), FirstOrderFilter(0.0, 0.1, 1 / gui_app.target_fps))
     self._distance_filters = [(FirstOrderFilter(0.0, 0.1, 1 / gui_app.target_fps), FirstOrderFilter(0.0, 0.1, 1 / gui_app.target_fps))
-                              for _ in range(3)]
+                              for _ in range(len(self._txt_distance))]
     self._personality: int | None = None
     self._personality_changed_time = -HIGHLIGHT_TIME
     self._should_draw = False
@@ -63,6 +76,9 @@ class LongIndicator(Widget):
     sm = ui_state.sm
     now = rl.get_time()
     personality = sm['selfdriveState'].personality.raw
+    if self._gap_reader is not None:
+      # the gap setting 0-3; settings 2 and 3 share a personality, so track the setting itself
+      personality = self._gap_reader.get(personality)
     if self._personality is not None and personality != self._personality:
       self._personality_changed_time = now
     self._personality = personality
@@ -76,7 +92,7 @@ class LongIndicator(Widget):
     blink = 0.35 / 0.9 if overriding and now % 0.375 > 0.1875 else 1.0
 
     count = personality + 1
-    for i, ((white, green), y, (active_f, green_f)) in enumerate(zip(self._txt_distance, (122, 136, 152), self._distance_filters, strict=True)):
+    for i, ((white, green), y, (active_f, green_f)) in enumerate(zip(self._txt_distance, self._distance_y, self._distance_filters, strict=True)):
       active = active_f.update(float(i < count))
       green_alpha = green_f.update(float(highlight and i == count - 1))
       # only lit bars blink on override
