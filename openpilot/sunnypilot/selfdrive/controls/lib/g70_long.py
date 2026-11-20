@@ -7,6 +7,8 @@ No file means stock behaviour for that setting.
                               the distance button cycles through four settings and the cluster shows one to four
                               bars; settings 3 and 4 both use the "relaxed" driving personality for everything else.
                               The car's own cruise held 1.11 s on its closest setting and 1.39 s on the next.
+                              The planner adds a fixed 6 m (plus the extra distance below) to time x speed, so
+                              1.05 s with 2 m extra measured 1.31 s at 72 mph (route d6).
   /data/g70_long_stop_extra   metres added to the distance kept to a lead, at every speed. The planner aims to stop
                               6 m behind a lead by its own measure; on the first drive the car stopped 0.8 m behind
                               one (the car's own cruise: 3.1 m median over 13 stops).
@@ -23,7 +25,7 @@ STOP_EXTRA_FILE = "/data/g70_long_stop_extra"
 ENGAGE_ANY_FILE = "/data/g70_long_engage_any"
 GAP_FILE = "/data/g70_long_gap"
 
-FOLLOW_MIN = 1.0
+FOLLOW_MIN = 0.9
 FOLLOW_MAX = 2.5
 STOP_EXTRA_MAX = 4.0
 

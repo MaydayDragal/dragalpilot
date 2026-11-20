@@ -6,6 +6,7 @@ from opendbc.can import CANDefine, CANParser
 from opendbc.car import Bus, create_button_events, structs
 from opendbc.car.common.conversions import Conversions as CV
 from opendbc.car.hyundai.hyundaicanfd import CanBus
+from opendbc.car.hyundai import hyundaican
 from opendbc.car.hyundai.values import HyundaiFlags, CAR, DBC, Buttons, CarControllerParams
 from opendbc.car.interfaces import CarStateBase
 
@@ -71,6 +72,11 @@ class CarState(CarStateBase, EsccCarStateBase, MadsCarState, CarStateExt):
     # camera SCC11, re-sent by the car controller (G70 2024, stock longitudinal); see hyundaican.scc11_info_filter
     self.scc11 = {}
     self.scc11_ts_nanos = 0
+    # G70 2024, openpilot longitudinal: the main button engages at the current speed (see hyundaican.py)
+    self.g70_engage_main = (CP.carFingerprint == CAR.GENESIS_G70_2024 and bool(CP.openpilotLongitudinalControl) and
+                            hyundaican.long_engage_main_enabled())
+    self.g70_cruise_available = False
+    self.g70_v_ego = 0.0
 
     # On some cars, CLU15->CF_Clu_VehicleSpeed can oscillate faster than the dash updates. Sample at 5 Hz
     self.cluster_speed = 0
@@ -83,6 +89,14 @@ class CarState(CarStateBase, EsccCarStateBase, MadsCarState, CarStateExt):
     # To avoid re-engaging when openpilot cancels, check user engagement intention via buttons
     # Main button also can trigger an engagement on these cars
     return any(btn in ENABLE_BUTTONS for btn in self.cruise_buttons) or any(self.main_buttons)
+
+  def update_button_enable(self, buttonEvents: list[structs.CarState.ButtonEvent]):
+    if super().update_button_enable(buttonEvents):
+      return True
+    # G70 2024, openpilot longitudinal: releasing the main button after it turned cruise on engages, when moving
+    if self.g70_engage_main and self.g70_cruise_available and self.g70_v_ego >= hyundaican.LONG_ENGAGE_MAIN_MIN_SPEED:
+      return any(b.type == ButtonType.mainCruise and not b.pressed for b in buttonEvents)
+    return False
 
   def update(self, can_parsers) -> tuple[structs.CarState, structs.CarStateSP]:
     cp = can_parsers[Bus.pt]
@@ -215,6 +229,8 @@ class CarState(CarStateBase, EsccCarStateBase, MadsCarState, CarStateExt):
 
     if self.CP.openpilotLongitudinalControl:
       ret.cruiseState.available = self.get_main_cruise(ret)
+    self.g70_cruise_available = bool(ret.cruiseState.available)
+    self.g70_v_ego = float(ret.vEgo)
 
     CarStateExt.update(self, ret, ret_sp, can_parsers, speed_conv)
 

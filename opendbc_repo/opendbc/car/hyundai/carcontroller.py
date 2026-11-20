@@ -79,6 +79,8 @@ class CarController(CarControllerBase, CcncCarController, EsccCarController, Lea
     self.lkas11_basreq_state = 0  # see hyundaican.lkas11_daw_filter
     self.scc11_sent_ts_nanos = 0  # timestamp of the last camera SCC11 frame that was re-sent
     self.scc11_filter = hyundaican.scc11_filter_enabled()  # read once at start
+    # openpilot longitudinal only: hide the camera's lead-departure announcement (read once at start)
+    self.long_no_lead_alert = bool(CP.openpilotLongitudinalControl) and hyundaican.long_no_lead_alert_enabled()
     self.now_nanos = 0
 
   def update(self, CC, CC_SP, CS, now_nanos):
@@ -202,6 +204,8 @@ class CarController(CarControllerBase, CcncCarController, EsccCarController, Lea
     # re-send it with the Driver Attention Warning removed. Stop when the camera's own message is older than 0.5 s.
     if self.car_fingerprint == CAR.GENESIS_G70_2024 and CS.lkas12_ts_nanos > 0:
       lkas12, self.lkas12_daw_level = hyundaican.lkas12_daw_filter(CS.lkas12, self.lkas12_daw_level)
+      if self.long_no_lead_alert:
+        lkas12 = hyundaican.lkas12_lead_departure_filter(lkas12)
       if self.frame % 10 == 0 and (self.now_nanos - CS.lkas12_ts_nanos) < 0.5e9:
         can_sends.append(hyundaican.create_lkas12(self.packer, lkas12))
 

@@ -187,6 +187,36 @@ def create_lkas12(packer, values):
   return packer.make_can_msg("LKAS12", 0, values)
 
 
+# dragalpilot (G70 2024, openpilot longitudinal). Two optional behaviours, each on when its file exists:
+#
+# /data/g70_long_engage_main: turning cruise on with the main button also engages at the current speed, as the
+#   car's own cruise does. Only above LONG_ENGAGE_MAIN_MIN_SPEED; below it the set / resume toggles engage as before.
+#
+# /data/g70_long_no_lead_alert: the camera announces a lead that drives away from a standstill in LKAS12 bit 32
+#   (bit 0 of CF_Lkas_TsrAddinfo_Display, set for 4.1 s). On routes d5 and d6 it was set twice in 69,150 frames,
+#   both times standing with the lead moving off at 6-7 mph, and never on three drives with the car's own cruise.
+#   With openpilot longitudinal the car restarts by itself, so the bit is cleared in the LKAS12 that is re-sent.
+LONG_ENGAGE_MAIN_FILE = "/data/g70_long_engage_main"
+LONG_NO_LEAD_ALERT_FILE = "/data/g70_long_no_lead_alert"
+LONG_ENGAGE_MAIN_MIN_SPEED = 2.2  # m/s, about 5 mph
+LKAS12_LEAD_DEPARTURE_BIT = 0x1
+
+
+def long_engage_main_enabled(path: str = LONG_ENGAGE_MAIN_FILE) -> bool:
+  return os.path.exists(path)
+
+
+def long_no_lead_alert_enabled(path: str = LONG_NO_LEAD_ALERT_FILE) -> bool:
+  return os.path.exists(path)
+
+
+def lkas12_lead_departure_filter(lkas12: dict) -> dict:
+  """Returns the camera's LKAS12 values with the lead-departure announcement cleared."""
+  values = dict(lkas12)
+  values["CF_Lkas_TsrAddinfo_Display"] = int(values["CF_Lkas_TsrAddinfo_Display"]) & ~LKAS12_LEAD_DEPARTURE_BIT
+  return values
+
+
 # SCC11 (0x420, camera, 50 Hz, 8 bytes, rolling AliveCounterACC, no checksum). SCCInfoDisplay = 4 makes the cluster
 # show "Use switch or pedal to accelerate" while cruise holds the car at a stop. On the G70 2024 with stock
 # longitudinal the panda blocks the camera's copy and the car controller re-sends each frame once. The frame is
