@@ -42,6 +42,7 @@ from openpilot.selfdrive.modeld.fill_model_msg import fill_model_msg, fill_drivi
 from openpilot.selfdrive.modeld.constants import ModelConstants, Plan
 from openpilot.selfdrive.modeld.helpers import MODELS_DIR, chestnut_present, chestnut_compiled, modeld_pkl_path, load_oob, wait_for_chestnut
 from openpilot.sunnypilot.livedelay.helpers import get_lat_delay, lat_smooth_at, read_lat_smooth_lookahead, read_lat_smooth_seconds, \
+                                                   lat_lookahead_low_at, read_lat_lookahead_low, \
                                                    read_lat_smooth_speeds
 from openpilot.sunnypilot.modeld_v2.modeld_base import ModelStateBase
 from openpilot.sunnypilot.selfdrive.controls.lib.relc import RoadEdgeLaneChangeController
@@ -52,6 +53,7 @@ LAT_SMOOTH_SECONDS = read_lat_smooth_seconds(0.0)  # dragalpilot: stock unless /
 LAT_SMOOTH_V_LO, LAT_SMOOTH_V_HI = read_lat_smooth_speeds()  # dragalpilot: optional speed range for the smoothing
 
 
+LAT_LOOKAHEAD_LOW = read_lat_lookahead_low()  # dragalpilot: none unless /data/g70_lat_lookahead_low exists
 LAT_SMOOTH_LOOKAHEAD = read_lat_smooth_lookahead(LAT_SMOOTH_SECONDS)  # dragalpilot: optional, defaults to the filter time
 
 
@@ -396,7 +398,7 @@ def main(demo=False):
     frame_id = sm["narrowRoadCameraState"].frameId
     v_ego = max(sm["carState"].vEgo, 0.)
     model.lat_delay = get_lat_delay(params, sm["lateralDelay"].lateralDelay)
-    lat_delay = sm["lateralDelay"].lateralDelay + lat_smooth_lookahead(v_ego)
+    lat_delay = sm["lateralDelay"].lateralDelay + lat_smooth_lookahead(v_ego) + lat_lookahead_low_at(v_ego, LAT_LOOKAHEAD_LOW)
     if sm.updated["extrinsicsCalibration"] and sm.seen['narrowRoadCameraState'] and sm.seen['deviceState']:
       device_from_calib_euler = np.array(sm["extrinsicsCalibration"].rpyCalib, dtype=np.float32)
       dc = DEVICE_CAMERAS[(str(sm['deviceState'].deviceType), str(sm['narrowRoadCameraState'].sensor))]

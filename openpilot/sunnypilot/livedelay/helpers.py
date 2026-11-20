@@ -194,3 +194,31 @@ def read_lat_ctrl_delay(path: str = LAT_CTRL_DELAY_FILE) -> float | None:
     return None
   return min(max(value, LAT_CTRL_DELAY_MIN), LAT_CTRL_DELAY_MAX)
 
+# dragalpilot (G70 2024): optional extra look-ahead for the model's steering request at low speed, read from a
+# one-line text file "seconds v_lo v_hi" (speeds in m/s): modeld aims that much further ahead below v_lo, not at
+# all above v_hi, linear in between. On straights at 20-45 mph (route d4) the request led the lane position by
+# about 20 degrees at 0.1-0.3 Hz, against 65-95 above 60 mph, while the car answered 45-60 degrees late, and the
+# loop magnified that band 1.6 times; the wheel swung 1 degree or more 9-14 times a minute (1-2 above 60 mph).
+# Only modeld uses it: controlsd keeps its own delay (/data/g70_lat_ctrl_delay). No file, or an unreadable one,
+# means none.
+LAT_LOOKAHEAD_LOW_FILE = "/data/g70_lat_lookahead_low"
+LAT_LOOKAHEAD_LOW_MAX = 0.25
+
+
+def read_lat_lookahead_low(path: str = LAT_LOOKAHEAD_LOW_FILE) -> tuple[float, float, float]:
+  try:
+    with open(path) as f:
+      parts = f.read().split()
+    seconds, v_lo, v_hi = float(parts[0]), float(parts[1]), float(parts[2])
+  except (OSError, ValueError, IndexError):
+    return 0.0, 0.0, 0.0
+  if seconds != seconds or v_lo != v_lo or v_hi != v_hi or v_lo < 0.0 or v_hi <= v_lo:
+    return 0.0, 0.0, 0.0
+  return min(max(seconds, 0.0), LAT_LOOKAHEAD_LOW_MAX), v_lo, v_hi
+
+
+def lat_lookahead_low_at(v_ego: float, schedule: tuple[float, float, float]) -> float:
+  seconds, v_lo, v_hi = schedule
+  if v_hi <= v_lo:
+    return 0.0
+  return seconds * (1.0 - min(max((v_ego - v_lo) / (v_hi - v_lo), 0.0), 1.0))

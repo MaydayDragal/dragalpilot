@@ -47,7 +47,7 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     self.output_should_stop = False
     self.g70_cluster_speed = g70_long.ClusterSpeed(g70_long.cluster_speed_enabled())  # dragalpilot
     self.g70_stop_speed = g70_long.read_stop_speed()  # dragalpilot: None unless /data/g70_long_stop_speed exists
-    self.g70_quick_start = g70_long.QuickStart(g70_long.read_start_accel(), self.dt)  # dragalpilot: off unless /data/g70_long_start exists
+    self.g70_quick_start = g70_long.QuickStart(g70_long.read_start_accel(), self.dt, g70_long.read_start_early())  # dragalpilot: off unless /data/g70_long_start exists
 
     self.v_desired_trajectory = np.zeros(CONTROL_N)
     self.a_desired_trajectory = np.zeros(CONTROL_N)

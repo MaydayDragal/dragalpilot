@@ -32,6 +32,13 @@ No file means stock behaviour for that setting.
                               0.5 m/s2 (a lead creeping forward at 0.7 m/s on route df does not start it), never
                               asks for more than the cruise plan allows, and ends at 1.5 m/s, after 2.5 s, or as
                               soon as the lead is no longer pulling away.
+                              On route e1 that request went out as intended and the car still first moved 1.6-2.1 s
+                              after the lead: it takes 1.0-1.2 s to let go of its standstill hold whatever is asked.
+                              A second number, "accel early", lets the hold go sooner: as soon as the lead is
+                              faster than 0.3 m/s and accelerating by more than 0.15 m/s2 the stop request is
+                              dropped with the small "early" acceleration, and the full one follows when the lead
+                              meets the conditions above. Behind a lead that creeps and stops again the car rolls
+                              a little before the plan stops it.
   /data/g70_long_gap          written by selfdrived: the current gap setting (0-3) when four are in use.
 """
 import os
@@ -59,6 +66,12 @@ START_END_SPEED = 1.5        # m/s: hand back to the plan
 START_MAX_T = 2.5            # s
 START_LEAD_MARGIN = 0.3      # m/s the lead must stay faster than the car by
 START_LEAD_ACCEL_END = -0.3  # m/s2
+START_EARLY_MIN = 0.1        # m/s2, range of the early request
+START_EARLY_MAX = 0.6
+START_EARLY_LEAD_SPEED = 0.3   # m/s
+START_EARLY_LEAD_ACCEL = 0.15  # m/s2
+START_EARLY_CYCLES = 3
+START_EARLY_LEAD_MARGIN = 0.1  # m/s
 
 FOLLOW_MIN = 0.6   # with the fixed 6 m plus the extra distance, 0.69 s is about 0.95 s behind the lead at 70 mph
 FOLLOW_MAX = 2.5
@@ -210,33 +223,57 @@ def read_start_accel(path: str = START_FILE) -> float | None:
   return min(max(value, START_ACCEL_MIN), START_ACCEL_MAX)
 
 
+def read_start_early(path: str = START_FILE) -> float | None:
+  try:
+    with open(path) as f:
+      value = float(f.read().split()[1])
+  except (OSError, ValueError, IndexError):
+    return None
+  if value != value:  # NaN
+    return None
+  return min(max(value, START_EARLY_MIN), START_EARLY_MAX)
+
+
 class QuickStart:
   """Asks for a fixed acceleration at once when the lead pulls away from a standstill (see /data/g70_long_start).
 
-  update() returns the acceleration to ask for while it is active, None otherwise."""
-  def __init__(self, accel: float | None, dt: float):
+  update() returns the acceleration to ask for while it is active, None otherwise. With `early` set, a first stage
+  with that smaller acceleration begins as soon as the lead creeps, so the car lets go of its hold sooner."""
+  def __init__(self, accel: float | None, dt: float, early: float | None = None):
     self.accel = accel
+    self.early = early if accel is not None else None
     self.dt = dt
+    self.reset()
+
+  def reset(self) -> None:
     self.count = 0
+    self.count_early = 0
     self.active = False
+    self.full = False
     self.t = 0.0
 
   def update(self, v_ego: float, lead_present: bool, d_rel: float, v_lead: float, a_lead: float, a_cruise: float) -> float | None:
     if self.accel is None:
       return None
+    near = bool(lead_present) and d_rel > START_MIN_GAP and a_cruise > 0.0
+    full_ok = near and v_lead > START_LEAD_SPEED and a_lead > START_LEAD_ACCEL
+    early_ok = self.early is not None and near and v_lead > START_EARLY_LEAD_SPEED and a_lead > START_EARLY_LEAD_ACCEL
     if self.active:
       self.t += self.dt
-      if (not lead_present or v_ego > START_END_SPEED or self.t > START_MAX_T or d_rel < START_MIN_GAP or
-          v_lead < v_ego + START_LEAD_MARGIN or a_lead < START_LEAD_ACCEL_END or a_cruise <= 0.0):
-        self.active = False
-        self.count = 0
-    else:
-      if (lead_present and v_ego < START_EGO_STOPPED and v_lead > START_LEAD_SPEED and a_lead > START_LEAD_ACCEL and
-          d_rel > START_MIN_GAP and a_cruise > 0.0):
-        self.count += 1
-      else:
-        self.count = 0
-      if self.count >= START_CYCLES:
-        self.active = True
+      margin = START_LEAD_MARGIN if self.full else START_EARLY_LEAD_MARGIN
+      if (not near or v_ego > START_END_SPEED or self.t > START_MAX_T or v_lead < v_ego + margin or a_lead < START_LEAD_ACCEL_END):
+        self.reset()
+      elif not self.full and full_ok:
+        self.full = True
         self.t = 0.0
-    return min(self.accel, a_cruise) if self.active else None
+    else:
+      stopped = v_ego < START_EGO_STOPPED
+      self.count = self.count + 1 if stopped and full_ok else 0
+      self.count_early = self.count_early + 1 if stopped and early_ok else 0
+      if self.count >= START_CYCLES:
+        self.active, self.full, self.t = True, True, 0.0
+      elif self.count_early >= START_EARLY_CYCLES:
+        self.active, self.full, self.t = True, False, 0.0
+    if not self.active:
+      return None
+    return min(self.accel if self.full else self.early, a_cruise)
