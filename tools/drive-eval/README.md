@@ -142,3 +142,16 @@ Reading logs on the PC: `pip install pycapnp zstandard`, then set `CEREAL_DIR` t
 - **Whole-drive steering numbers depend on the route as much as on the setup.** Above 60 mph with curves included, lane movement ranged from 2.3 to 9.1 cm across drives with no relation to settings. Use the same-road section of `sway.py`, and prefer drives in the same direction at the same time of day.
 - **A delay can be the car's.** Before changing what is asked, check with `restart_delay.py --trace` how long the car takes after the request.
 
+## Added 2026-11-20 (evening)
+
+| Script | Where | What it does |
+|---|---|---|
+| `brake_events.py <long extract dir> <out.json> <route> ...` | PC | every substantial braking event with openpilot longitudinal (1.5 m/s2 held 0.5 s, or a slowdown to a standstill from above 15 mph): a summary line and a 4 Hz time series per event |
+| `brake_plot.py <events.json> <out prefix>` | PC (matplotlib) | small-multiple pages of those events, 12 per page: speed of car and lead, gap, acceleration asked and measured |
+| `plan_source.py <recordings root> <route>` | PC | which part of the planner held the request (lead plan, cruise plan, driving model), overall and per braking stretch, with the model's own request alongside |
+| `replay_lead_brake.py <g70_long.py> <out.npy> <route> "<tau thr>" "<tau thr>"` | comma (offroad) | replays a route through the installed planner as installed and with a lead-braking fade setting from a not-yet-installed `g70_long.py` |
+| `replay_plan_variants.py <out.npy> <route> <variant> ...` | comma (offroad) | the same for variants `jerk=<scale>` (smoothness weights) and `ahead=<s>` (plan read further ahead); `base` for none |
+
+- **Replay before recommending a planner change.** The unchanged replay matched the log at 0.999, a 28-minute route with four variants takes about ten minutes, and it showed in advance that a change would do nothing. A replay keeps the logged gap and car response, so it can show when the planner asks, not what a different following distance would do.
+- Onroad-only processes are not running while parked, so the replay loads the planner without disturbing anything; run it with `nice`.
+

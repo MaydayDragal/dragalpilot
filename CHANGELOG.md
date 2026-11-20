@@ -1244,3 +1244,12 @@ Details: [docs/findings/2026-11-20-g70-restart-delay-stops-low-speed-steering.md
 - **`e3f7ac8`** (installed about 17:20): early restart stage (second number in `/data/g70_long_start`, set to `1.2 0.3`), and extra model look-ahead at low speed (`/data/g70_lat_lookahead_low` = `0.12 13 18`). Replayed over ten drives the early stage begins 0.2-0.8 s before the logged stop release; 4 of 19 starts are behind a lead that crept and stopped. Not driven.
 - **Tools:** `restart_delay.py`, `replay_quick_start.py`, `lat_state.py`, `sway_vs_lead.py`; setup lists in `sway.py`, `gap_check.py`, `gap_safety.py`, `gap_speed.py` updated.
 
+## 2026-11-20 evening (local time): hard braking behind a slowing lead, gap 0.69 s -> 0.85 s
+
+Details: [docs/findings/2026-11-20-g70-hard-braking-behind-a-lead.md](docs/findings/2026-11-20-g70-hard-braking-behind-a-lead.md).
+
+- **Driver:** firm braking also at higher speed. **Plotted** all 33 substantial braking events of `df`, `e0`, `e1` (`brake_events.py`, `brake_plot.py`): seven at 3.0 m/s2 or more, up to 70 mph; the car starts a median 1.3 s after the lead and brakes harder than it in 20 of 29.
+- **Replayed through the real planner on the parked comma** (`replay_lead_brake.py`, `replay_plan_variants.py`; unchanged replay matches the log at 0.999): assuming the lead keeps braking, smoothness weights x 0.4, and reading the plan 0.3 s further ahead each move the start of braking by a median 0.00 s (at best 0.3-0.5 s on highway events). The first had been recommended and written; it was not committed or installed.
+- **Plan source** (`plan_source.py`): the driving model's request is in the planner's choice with experimental mode off; it starts the braking in 23 of 38 stretches (all below about 55 mph). The strongest request comes from the lead plan (-3.0 to -3.5 where the model asks -1.05 to -2.2).
+- **Device (about 18:20, user-approved):** `/data/g70_long_follow` = `0.85 1.25 1.45 1.75`. No reboot needed. Not driven.
+
