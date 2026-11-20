@@ -47,6 +47,7 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     self.output_should_stop = False
     self.g70_cluster_speed = g70_long.ClusterSpeed(g70_long.cluster_speed_enabled())  # dragalpilot
     self.g70_stop_speed = g70_long.read_stop_speed()  # dragalpilot: None unless /data/g70_long_stop_speed exists
+    self.g70_quick_start = g70_long.QuickStart(g70_long.read_start_accel(), self.dt)  # dragalpilot: off unless /data/g70_long_start exists
 
     self.v_desired_trajectory = np.zeros(CONTROL_N)
     self.a_desired_trajectory = np.zeros(CONTROL_N)
@@ -122,6 +123,12 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
 
     output_a_target, self.mpc.source, _ = min(candidates, key=lambda c: c[0])
     self.output_should_stop = any(should_stop for _, _, should_stop in candidates)
+    # dragalpilot: lead pulling away from a standstill, see g70_long.QuickStart
+    g70_lead = sm['radarState'].leadOne
+    g70_start = self.g70_quick_start.update(v_ego, g70_lead.present, g70_lead.dRel, g70_lead.vLead, g70_lead.aLeadK, self.a_cruise)
+    if g70_start is not None:
+      output_a_target = max(output_a_target, g70_start)
+      self.output_should_stop = False
     self.output_a_target = np.clip(output_a_target, ACCEL_MIN, ACCEL_MAX)
 
     self.v_desired_filter.x = self.v_desired_filter.x + self.dt * (self.output_a_target + a_prev) / 2.0
