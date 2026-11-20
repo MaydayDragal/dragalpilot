@@ -151,6 +151,18 @@ void hyundai_common_cruise_buttons_check(const int cruise_button, const bool mai
     // toggle main cruise state on rising edge of main cruise button
     if (main_button && !main_button_prev && hyundai_longitudinal_main_cruise_toggleable) {
       acc_main_on = !acc_main_on;
+
+      // dragalpilot: turning main cruise off exits controls
+      if (!acc_main_on) {
+        controls_allowed = false;
+      }
+    }
+
+    // dragalpilot: enter controls on the falling edge of the main cruise button when that press turned main cruise on,
+    // as the car's own cruise engages. Without this, openpilot engaging from the main button is refused here and the
+    // car raises a cruise fault when its SCC12 stops arriving (route 000000d7).
+    if (!main_button && main_button_prev && hyundai_longitudinal_main_cruise_toggleable && acc_main_on) {
+      controls_allowed = true;
     }
 
     cruise_button_prev = cruise_button;

@@ -166,6 +166,53 @@ class HyundaiLongitudinalBase(common.LongitudinalAccelSafetyTest):
               self.assertFalse(self.safety.get_controls_allowed_lateral())
     self.safety.set_current_safety_param_sp(default_safety_param_sp)
 
+  def test_main_cruise_button_enters_controls(self):
+    """dragalpilot: with a toggleable main cruise, releasing the main button after it turned main cruise on
+    allows controls; a press that turns main cruise off exits controls and its release does not allow them"""
+    default_safety_mode = self.safety.get_current_safety_mode()
+    default_safety_param = self.safety.get_current_safety_param()
+    default_safety_param_sp = self.safety.get_current_safety_param_sp()
+
+    for main_cruise_toggleable in (True, False):
+      with self.subTest("main_cruise_toggleable", main_cruise_toggleable=main_cruise_toggleable):
+        main_cruise_toggleable_flag = HyundaiSafetyFlagsSP.LONG_MAIN_CRUISE_TOGGLEABLE if main_cruise_toggleable else 0
+        self.safety.set_current_safety_param_sp(default_safety_param_sp | main_cruise_toggleable_flag)
+        self.safety.set_safety_hooks(default_safety_mode, default_safety_param)
+        self.safety.set_controls_allowed(False)
+
+        # press: main cruise turns on, controls not yet allowed
+        self._rx(self._main_cruise_button_msg(0))
+        self._rx(self._main_cruise_button_msg(1))
+        self.assertEqual(main_cruise_toggleable, self.safety.get_acc_main_on())
+        self.assertFalse(self.safety.get_controls_allowed())
+        for _ in range(5):  # held
+          self._rx(self._main_cruise_button_msg(1))
+          self.assertFalse(self.safety.get_controls_allowed())
+
+        # release: controls allowed only with the toggleable main cruise
+        self._rx(self._main_cruise_button_msg(0))
+        self.assertEqual(main_cruise_toggleable, self.safety.get_controls_allowed())
+        for _ in range(5):
+          self._rx(self._main_cruise_button_msg(0))
+          self.assertEqual(main_cruise_toggleable, self.safety.get_controls_allowed())
+
+        # cancel still exits, and nothing re-enters without a new press
+        self._rx(self._button_msg(Buttons.CANCEL))
+        self.assertFalse(self.safety.get_controls_allowed())
+        self._rx(self._button_msg(Buttons.NONE))
+        self.assertFalse(self.safety.get_controls_allowed())
+
+        # set enters as before; a press that turns main cruise off exits at once and its release does not re-enter
+        self._rx(self._button_msg(Buttons.SET))
+        self._rx(self._button_msg(Buttons.NONE))
+        self.assertTrue(self.safety.get_controls_allowed())
+        self._rx(self._main_cruise_button_msg(1))
+        self.assertEqual(not main_cruise_toggleable, self.safety.get_controls_allowed())
+        self._rx(self._main_cruise_button_msg(0))
+        self.assertEqual(not main_cruise_toggleable, self.safety.get_controls_allowed())
+        self.assertFalse(self.safety.get_acc_main_on())
+    self.safety.set_current_safety_param_sp(default_safety_param_sp)
+
   def test_acc_main_sync_mismatches_reset(self):
     """Test that acc_main_on_mismatches resets properly on rising edge of main button"""
     default_safety_mode = self.safety.get_current_safety_mode()
