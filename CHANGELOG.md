@@ -1195,3 +1195,19 @@ Details: [docs/findings/2026-11-19-g70-friction-ramp-openpilot-longitudinal.md](
 - **Tools:** `sway.py` has 20–45, 45–60 and above 60 mph bands; its setup list was trimmed to eight.
 - Panda safety tests not run. No test covers the `selfdrived` and `controlsd` changes.
 
+## 2026-11-19 (23:50Z) to 2026-11-20 (about 03:00Z): cruise fault from the main button, panda rule, close stops, cluster speed, four gap bars
+
+Details: [docs/findings/2026-11-20-g70-openpilot-longitudinal-cruise-fault-gap-ui.md](docs/findings/2026-11-20-g70-openpilot-longitudinal-cruise-fault-gap-ui.md).
+
+- **`d6`** (`87e6a9e`): either-toggle engage and four gap settings work; stop 3.2 m behind the lead; hunting improved (driver).
+- **`06a4aa0`** (installed): main button engages at the current speed, lead-departure bit cleared in LKAS12, gap floor 0.9 s; setting 1 at 0.99 s; steering delay 0.15 s.
+- **`d7`–`d9`: cruise fault** 1.4 s after the first main-button press. The panda only allowed controls after set or resume, rejected SCC12 (25 frames), and the ESC raised `ACCEnable` 3. Caused by `06a4aa0`; the device-side test had not included the panda. `g70_long_engage_main` removed.
+- **`9d84a23`, `de7b8cf`** (installed, panda reflashed to `c9c5f7f0…`): the main button enters controls when it turns main cruise on; turning it off exits. **Panda safety tests built and run on the comma for the first time:** 9 bookkeeping failures left by the earlier TX-list changes fixed, new test added, full suite 9232 OK; the logged fault replayed with 25 of 25 rejected frames accepted. `g70_long_engage_main` created again.
+- **`da`, `db`**: main button engaged four times without a fault; lead-departure announcement hidden; a stop 0.7 m behind the lead; cluster 1.9 % above the controlled speed; steering delay 0.15 s no better than 0.20 s on 10.7 shared minutes.
+- **`671d3db`, `cdc921c`** (installed): set speed taken as cluster speed (`g70_long_cluster_speed`); the plan asks for a stop below `g70_long_stop_speed` = 1.0 m/s while braking. Replay of `db` through the installed planner: stop requested with 4.5 m to go instead of 1.0 m.
+- **`b451982`** (installed): gap floor 0.7 s; setting 1 at 0.75 s (user request; about 1.0 s at 72 mph with the fixed 8 m). Steering delay back to 0.20 s.
+- **`9aa2965`** (installed): four distance bars on the comma screen with four gap settings, rendered and approved before installing; equal 4 px gaps after the first layout was rejected.
+- **`5ad67b7`** (installed): the gap reader re-reads at once on a disagreement; the cluster had shown three bars for up to 0.5 s when cycling from setting 1 to 4.
+- **Tools:** `replay_fault.py`, `replay_planner.py`, `render_gap_ui.py`, `long_scan.py`; `sway.py` setup list updated.
+- Not driven: everything after `de7b8cf`.
+
