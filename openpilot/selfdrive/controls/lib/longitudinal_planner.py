@@ -11,6 +11,7 @@ from openpilot.selfdrive.controls.lib.accel_boost import AccelBoost
 from openpilot.selfdrive.controls.lib.longcontrol import LongCtrlState
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import LongitudinalMpc, LongitudinalPlanSource
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import T_IDXS as T_IDXS_MPC
+from openpilot.sunnypilot.selfdrive.controls.lib import g70_long
 from openpilot.selfdrive.controls.lib.drive_helpers import CONTROL_N, get_accel_from_plan, should_stop
 from openpilot.selfdrive.car.cruise import V_CRUISE_MAX, V_CRUISE_UNSET
 from openpilot.common.swaglog import cloudlog
@@ -44,6 +45,8 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     self.a_cruise = init_a
     self.output_a_target = init_a
     self.output_should_stop = False
+    self.g70_cluster_speed = g70_long.ClusterSpeed(g70_long.cluster_speed_enabled())  # dragalpilot
+    self.g70_stop_speed = g70_long.read_stop_speed()  # dragalpilot: None unless /data/g70_long_stop_speed exists
 
     self.v_desired_trajectory = np.zeros(CONTROL_N)
     self.a_desired_trajectory = np.zeros(CONTROL_N)
@@ -55,6 +58,8 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     v_ego = sm['carState'].vEgo
     v_cruise_kph = min(sm['carState'].vCruise, V_CRUISE_MAX)
     v_cruise = v_cruise_kph * CV.KPH_TO_MS
+    # dragalpilot: optionally treat the set speed as the cluster's speed (see g70_long.py)
+    v_cruise = self.g70_cluster_speed.update(v_cruise, sm['carState'].vEgo, sm['carState'].vEgoCluster)
     if sm['controlsState'].forceDecel:
       v_cruise = 0.0
 
@@ -102,7 +107,7 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     action_t =  self.CP.longitudinalActuatorDelay + DT_MDL
     output_a_target_mpc = get_accel_from_plan(self.v_desired_trajectory, self.a_desired_trajectory, CONTROL_N_T_IDX,
                                               action_t=action_t)
-    output_should_stop_mpc = should_stop(v_ego, output_a_target_mpc)
+    output_should_stop_mpc = should_stop(v_ego, output_a_target_mpc) or g70_long.early_stop(v_ego, output_a_target_mpc, self.g70_stop_speed)
     output_a_target_e2e = sm['modelV2'].action.desiredAcceleration
     output_should_stop_e2e = sm['modelV2'].action.shouldStop
 
