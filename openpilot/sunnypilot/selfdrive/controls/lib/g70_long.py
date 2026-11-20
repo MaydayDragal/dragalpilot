@@ -44,6 +44,7 @@ FOLLOW_MAX = 2.5
 STOP_EXTRA_MAX = 4.0
 CLUSTER_SPEED_MIN_V = 10.0       # m/s
 CLUSTER_SPEED_RATIO_MIN = 0.95
+CLUSTER_SPEED_MAX_A = 0.3        # m/s2
 
 
 def read_follow_table(path: str = FOLLOW_FILE) -> tuple[float, ...] | None:
@@ -138,17 +139,18 @@ def cluster_speed_enabled(path: str = CLUSTER_SPEED_FILE) -> bool:
 class ClusterSpeed:
   """Scales the planner's cruise speed so that the cluster, not the wheel-speed value, reaches the set speed.
 
-  The ratio true / cluster is measured above CLUSTER_SPEED_MIN_V and filtered slowly (the cluster speed is whole
+  The ratio true / cluster is measured above CLUSTER_SPEED_MIN_V at steady speed and filtered slowly (the cluster speed is whole
   mph or km/h); it is kept between CLUSTER_SPEED_RATIO_MIN and 1, so the car can only go slower than without it."""
   def __init__(self, enabled: bool, alpha: float = 0.005):
     self.enabled = enabled
     self.alpha = alpha
     self.ratio = 1.0
 
-  def update(self, v_cruise: float, v_ego: float, v_ego_cluster: float) -> float:
+  def update(self, v_cruise: float, v_ego: float, v_ego_cluster: float, a_ego: float) -> float:
     if not self.enabled:
       return v_cruise
-    if v_ego > CLUSTER_SPEED_MIN_V and v_ego_cluster > CLUSTER_SPEED_MIN_V:
+    # learn only at steady speed: the cluster value lags while braking (15 against 12.7 mph on route db)
+    if v_ego > CLUSTER_SPEED_MIN_V and v_ego_cluster > CLUSTER_SPEED_MIN_V and abs(a_ego) < CLUSTER_SPEED_MAX_A:
       ratio = min(max(v_ego / v_ego_cluster, CLUSTER_SPEED_RATIO_MIN), 1.0)
       self.ratio += self.alpha * (ratio - self.ratio)
     return v_cruise * self.ratio

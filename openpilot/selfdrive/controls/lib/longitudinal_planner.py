@@ -59,7 +59,7 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     v_cruise_kph = min(sm['carState'].vCruise, V_CRUISE_MAX)
     v_cruise = v_cruise_kph * CV.KPH_TO_MS
     # dragalpilot: optionally treat the set speed as the cluster's speed (see g70_long.py)
-    v_cruise = self.g70_cluster_speed.update(v_cruise, sm['carState'].vEgo, sm['carState'].vEgoCluster)
+    v_cruise = self.g70_cluster_speed.update(v_cruise, sm['carState'].vEgo, sm['carState'].vEgoCluster, sm['carState'].aEgo)
     if sm['controlsState'].forceDecel:
       v_cruise = 0.0
 
