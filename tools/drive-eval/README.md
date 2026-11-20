@@ -114,3 +114,19 @@ Copy the `.pkl` files to the PC and delete `/data/tmp/ext` afterwards. A route i
 - **Panda safety tests on the comma:** copy `opendbc_repo/opendbc` to `/data/tmp/st/opendbc`, overlay changed files with LF line endings, build `safety/tests/libsafety/libsafety.so` with gcc (flags in the 2026-11-19 cruise-fault findings, section 4), and run `python -m unittest opendbc.safety.tests.test_hyundai` with `PYTHONPATH=/data/tmp/st`. The whole suite takes about 4 minutes. Remove `/data/tmp/st` afterwards. Run it for every change under `opendbc/safety`.
 - **Before changing how openpilot longitudinal engages or disengages**, check the panda's rule for the same button (`hyundai_common_cruise_buttons_check`): if openpilot engages and the panda does not allow controls, SCC12 is rejected and the car raises a cruise fault that stays until it is restarted.
 
+## Added 2026-11-20
+
+Reading logs on the PC: `pip install pycapnp zstandard`, then set `CEREAL_DIR` to the sunnypilot checkout's `openpilot/cereal` folder and `CAR_CAPNP_DIR` to a folder holding `car.capnp` (`git show HEAD:opendbc_repo/opendbc/car/car.capnp > car.capnp` in the checkout).
+
+| Script | Where | What it does |
+|---|---|---|
+| `pclog.py` | PC (imported) | `for msg in pclog.read("...rlog.zst")`: reads a comma log with pycapnp. About 0.3 s per segment. Stops quietly at a message cut off at ignition-off. |
+| `gap_check.py <recordings root>` | PC | steady-following distance per gap setting (cluster bars) for each setup in `SETUPS`, against following time x speed + 6 m + extra, and the following time the measurement implies |
+| `gap_safety.py <recordings root>` | PC | per setup in `GROUPS`: time-gap percentiles, shortest time to collision, strongest braking and each event under -1.5 m/s2, the set speed against the cluster, and each stop with the speed at which the stop was first requested |
+| `gap_speed.py <long extract dir>` | PC | median following distance per 5 mph band for the stock cruise's closest setting and each openpilot setup, with a straight-line fit; prints a JSON line for charting |
+| `render_fan_ui.py <checkout> <out.png>` | PC (Pillow) | runs `fan_indicator.py` and `long_indicator.py` with a drawing stand-in and renders the screen at several fan settings |
+| `render_screen_map.py <checkout> <out.png>` | PC (Pillow, numpy) | places every driving-screen element from the real icons and fonts at the positions in the code, in seven situations, and reports any two elements that share pixels. Positions are transcribed by hand: update it when the widgets change. |
+
+- **A following time is not a gap.** The planner's desired distance at equal speeds is time x speed + 6 m + `g70_long_stop_extra`. Check a new setting with `gap_check.py` before describing it as a distance.
+- **Before adding anything to the driving screen**, run `render_screen_map.py`: an earlier change was checked against one neighbour and overlapped another.
+

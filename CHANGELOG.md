@@ -1211,3 +1211,18 @@ Details: [docs/findings/2026-11-19-g70-openpilot-longitudinal-cruise-fault-gap-u
 - **Tools:** `replay_fault.py`, `replay_planner.py`, `render_gap_ui.py`, `long_scan.py`; `sway.py` setup list updated.
 - Not driven: everything after `de7b8cf`.
 - **Dates:** from this entry on, dates and times in the notes are local time (US Eastern). Earlier entries are in UTC and marked with Z.
+
+## 2026-11-19 late evening to 2026-11-20 morning (local time): fan readout, following distance verified per step, 0.69 s, low-speed friction ramp
+
+Details: [docs/findings/2026-11-20-g70-gap-verification-fan-readout-pc-logs.md](docs/findings/2026-11-20-g70-gap-verification-fan-readout-pc-logs.md).
+
+- **System load and temperature** read from the logs: `db` warmed from 37 to 68.6 °C in 10.8 min with the fan at 30 %; the hottest run on the device is `b3` (2026-11-15, stationary, 76.5 °C, intake air to 56 °C, fan to 67 %). Thermal status ok on all.
+- **`bb1c191`** (installed): fan readout in the top right of the driving screen (`/data/g70_ui_fan`). Rendered and approved first. Driver: worked well.
+- **Screen overlap check** (`render_screen_map.py`): the fan readout shares no pixels with anything; the four gap bars share 264 px with the lane-change arrow (stock three bars: 59). Bars left as they are (user).
+- **Drives `dc`, `dd`, `de`** (0.75 s gap, controller delay back to 0.20 s): gap 34.5 m at 75 mph (expected 33.3); set speed matches the cluster (+0.32 mph against +1.45); acceleration swings with a lead 1.7 per minute (stock 1.8); one slowdown at −2.99 m/s². Highway lane movement 2.98 cm at 0.2–0.7 Hz (previous 3.90, best 2.44). 20–45 mph on `dc`: 13.2 ping-pong swings per minute.
+- **Following distance per step** (`gap_check.py`, `gap_speed.py`, `gap_safety.py`): 1.25 s → 40.1 m at 61 mph, 1.05 s + 2 m → 42.0 m at 74 mph, 0.99 s → 38.9 m at 68 mph, 0.75 s → 34.5 m at 75 mph, each within about a metre of time x speed + 6 m + extra. Against the stock cruise's closest setting, 0.75 s is 2 m closer at 70–75 mph.
+- **`657c56a`** (installed): following-time floor 0.6 s. Device: `/data/g70_long_follow` = `0.69 1.25 1.45 1.75` (user request, a further 2 m). Not driven.
+- **Device:** `/data/g70_friction_threshold` `0.40` → `0.24 0.40 13 18` against the low-speed hunt. Not driven.
+- **Tools:** `pclog.py` reads rlogs on the PC (pycapnp, zstandard); `gap_check.py`, `gap_safety.py`, `gap_speed.py`, `render_fan_ui.py`, `render_screen_map.py`. `sway.py` setup list updated.
+- The comma was not reachable over wifi from the PC; pulled over USB.
+
