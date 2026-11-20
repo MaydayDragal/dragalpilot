@@ -1,8 +1,8 @@
 # G70 2024: openpilot longitudinal settled in — cruise fault from the main button, panda rule, close stops, cluster speed, four gap bars
 
-Covers 2026-11-19 23:50Z to about 2026-11-20 03:00Z. Drives `000000d6`–`000000db`. Continues [2026-11-19-g70-friction-ramp-openpilot-longitudinal.md](2026-11-19-g70-friction-ramp-openpilot-longitudinal.md). Device identifiers and GPS are kept out of this repo.
+Covers the evening of 2026-11-19, 18:50 to about 22:00 local time (US Eastern, UTC−5; 23:50Z to 03:00Z in the logs). Drives `000000d6`–`000000db`. Continues [2026-11-19-g70-friction-ramp-openpilot-longitudinal.md](2026-11-19-g70-friction-ramp-openpilot-longitudinal.md). Device identifiers and GPS are kept out of this repo.
 
-Statements are marked as observations (measured from logs or tests), inferences, or plans. The device clock was unset after several reboots in this period, so later times are approximate.
+Statements are marked as observations (measured from logs or tests), inferences, or plans. Dates and times in this document are local time; the device and its logs use UTC. The device clock was unset after several reboots in this period, so later times are approximate.
 
 ## 1. Summary
 
@@ -99,19 +99,19 @@ cd /data/tmp/st && PYTHONPATH=/data/tmp/st /usr/local/venv/bin/python -m unittes
 - **Cluster (observation, driver):** going from setting 1 to 4 the cluster showed three bars and then the fourth a moment later. `GapReader` re-read the gap file every 0.5 s and fell back to the personality while the two disagreed. `5ad67b7`: period 0.1 s, and an immediate re-read (at most every 0.02 s) on a disagreement. Replay of the sequence: 0.49 s of three bars before, one 10 ms frame after.
 - **comma screen (`9aa2965`, `long_indicator.py`):** with four gap settings, the three stock bars at their stock sizes plus a smaller one above (24 × 5, 32 × 7, 40 × 9, 48 × 11 px), 4 px between each pair (stock: 6 px), from y 118 to 162; lit by the gap setting; the change highlight follows the setting. Three settings: unchanged. Rendered before installing by running the widget code with a drawing stand-in (`tools/drive-eval/render_gap_ui.py`):
 
-![four-bar distance indicator, settings 1 to 4](img/2026-11-20-gap-indicator-4-bars.png)
+![four-bar distance indicator, settings 1 to 4](img/2026-11-19-gap-indicator-4-bars.png)
 
 - The first layout had gaps of 4, 3.5 and 4 px (driver: not equal); the gaps in the render above measure 4, 4 and 4 px.
 - Not changed: the comma's settings menu still lists three following-distance names.
 
-## 7. Device record (user-authorized; UTC, times after 01:00 approximate)
+## 7. Device record (user-authorized; 2026-11-19 local time, times after 20:00 approximate)
 
 | When | Change |
 |---|---|
-| 2026-11-20 about 00:25 | `06a4aa0` installed; `/data/g70_long_follow` = `0.99 1.25 1.45 1.75`; `g70_long_engage_main`, `g70_long_no_lead_alert` created; `/data/g70_lat_ctrl_delay` 0.20 → 0.15 |
-| 00:45 | `g70_long_engage_main` removed after the cruise fault |
-| about 00:55 | `de7b8cf` installed, panda reflashed (`c9c5f7f0…`); `g70_long_engage_main` created again |
-| after `db` | `671d3db`, `cdc921c` installed; follow `0.93 …`; `g70_long_stop_speed` = `1.0`; `g70_long_cluster_speed` created |
+| about 19:25 | `06a4aa0` installed; `/data/g70_long_follow` = `0.99 1.25 1.45 1.75`; `g70_long_engage_main`, `g70_long_no_lead_alert` created; `/data/g70_lat_ctrl_delay` 0.20 → 0.15 |
+| 19:45 | `g70_long_engage_main` removed after the cruise fault |
+| about 19:55 | `de7b8cf` installed, panda reflashed (`c9c5f7f0…`); `g70_long_engage_main` created again |
+| after `db` (about 21:15) | `671d3db`, `cdc921c` installed; follow `0.93 …`; `g70_long_stop_speed` = `1.0`; `g70_long_cluster_speed` created |
 | later | `b451982` installed; follow `0.75 1.25 1.45 1.75`; `/data/g70_lat_ctrl_delay` 0.15 → 0.20 |
 | later | `9aa2965` installed (four-bar indicator) |
 | later | `5ad67b7` installed (gap reader); verified over the network, the USB link did not return after this reboot |

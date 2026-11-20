@@ -102,7 +102,7 @@ Copy the `.pkl` files to the PC and delete `/data/tmp/ext` afterwards. A route i
 - With stock longitudinal, `a_req` in `long_baseline.py` is the car's own cruise request. With openpilot longitudinal it is still the camera's SCC12, which is no longer what drives the car; use `carControl.actuators.accel` (in the `cc` rows of the extract) for what was commanded.
 - `sway.py` now has three speed bands (20-45, 45-60, above 60 mph). Its `SETUPS` list is limited to eight; older setups were removed from it as newer ones were added (their numbers are in the findings).
 
-## Added 2026-11-20
+## Added 2026-11-19 (evening)
 
 | Script | Where | What it does |
 |---|---|---|
@@ -111,6 +111,6 @@ Copy the `.pkl` files to the PC and delete `/data/tmp/ext` afterwards. A route i
 | `replay_fault.py` | comma, against a scratch copy of `opendbc` in `/data/tmp/st` with `libsafety.so` built there | replays the CAN traffic of the cruise fault (`d7`) through the panda safety code: when controls are allowed, and whether the rejected SCC12 frames are accepted |
 | `render_gap_ui.py <sunnypilot checkout> <out.png>` | PC (needs Pillow) | runs the real `long_indicator.py` widget code with a drawing stand-in and renders the 536 x 240 comma screen for each gap setting, with zooms and the three-bar layout for comparison |
 
-- **Panda safety tests on the comma:** copy `opendbc_repo/opendbc` to `/data/tmp/st/opendbc`, overlay changed files with LF line endings, build `safety/tests/libsafety/libsafety.so` with gcc (flags in the 2026-11-20 findings, section 4), and run `python -m unittest opendbc.safety.tests.test_hyundai` with `PYTHONPATH=/data/tmp/st`. The whole suite takes about 4 minutes. Remove `/data/tmp/st` afterwards. Run it for every change under `opendbc/safety`.
+- **Panda safety tests on the comma:** copy `opendbc_repo/opendbc` to `/data/tmp/st/opendbc`, overlay changed files with LF line endings, build `safety/tests/libsafety/libsafety.so` with gcc (flags in the 2026-11-19 cruise-fault findings, section 4), and run `python -m unittest opendbc.safety.tests.test_hyundai` with `PYTHONPATH=/data/tmp/st`. The whole suite takes about 4 minutes. Remove `/data/tmp/st` afterwards. Run it for every change under `opendbc/safety`.
 - **Before changing how openpilot longitudinal engages or disengages**, check the panda's rule for the same button (`hyundai_common_cruise_buttons_check`): if openpilot engages and the panda does not allow controls, SCC12 is rejected and the car raises a cruise fault that stays until it is restarted.
 

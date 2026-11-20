@@ -1195,9 +1195,9 @@ Details: [docs/findings/2026-11-19-g70-friction-ramp-openpilot-longitudinal.md](
 - **Tools:** `sway.py` has 20–45, 45–60 and above 60 mph bands; its setup list was trimmed to eight.
 - Panda safety tests not run. No test covers the `selfdrived` and `controlsd` changes.
 
-## 2026-11-19 (23:50Z) to 2026-11-20 (about 03:00Z): cruise fault from the main button, panda rule, close stops, cluster speed, four gap bars
+## 2026-11-19 evening (18:50 to about 22:00 local time): cruise fault from the main button, panda rule, close stops, cluster speed, four gap bars
 
-Details: [docs/findings/2026-11-20-g70-openpilot-longitudinal-cruise-fault-gap-ui.md](docs/findings/2026-11-20-g70-openpilot-longitudinal-cruise-fault-gap-ui.md).
+Details: [docs/findings/2026-11-19-g70-openpilot-longitudinal-cruise-fault-gap-ui.md](docs/findings/2026-11-19-g70-openpilot-longitudinal-cruise-fault-gap-ui.md).
 
 - **`d6`** (`87e6a9e`): either-toggle engage and four gap settings work; stop 3.2 m behind the lead; hunting improved (driver).
 - **`06a4aa0`** (installed): main button engages at the current speed, lead-departure bit cleared in LKAS12, gap floor 0.9 s; setting 1 at 0.99 s; steering delay 0.15 s.
@@ -1210,4 +1210,4 @@ Details: [docs/findings/2026-11-20-g70-openpilot-longitudinal-cruise-fault-gap-u
 - **`5ad67b7`** (installed): the gap reader re-reads at once on a disagreement; the cluster had shown three bars for up to 0.5 s when cycling from setting 1 to 4.
 - **Tools:** `replay_fault.py`, `replay_planner.py`, `render_gap_ui.py`, `long_scan.py`; `sway.py` setup list updated.
 - Not driven: everything after `de7b8cf`.
-
+- **Dates:** from this entry on, dates and times in the notes are local time (US Eastern). Earlier entries are in UTC and marked with Z.
