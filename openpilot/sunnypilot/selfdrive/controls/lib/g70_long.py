@@ -101,17 +101,24 @@ def write_gap(gap: int, path: str = GAP_FILE) -> None:
 
 
 class GapReader:
-  """The current gap setting for processes other than selfdrived; re-reads the file at most every `period` s."""
-  def __init__(self, path: str = GAP_FILE, period: float = 0.5):
+  """The current gap setting for processes other than selfdrived.
+
+  Re-reads the file every `period` s, and at once (at most every `retry` s) when the value it holds disagrees with
+  the personality. selfdrived writes the file before it publishes the new personality, so a disagreement means the
+  held value is stale: with a 0.5 s period and no retry, going from setting 1 to 4 showed three bars on the cluster
+  for a moment before the fourth."""
+  def __init__(self, path: str = GAP_FILE, period: float = 0.1, retry: float = 0.02):
     self.path = path
     self.period = period
+    self.retry = retry
     self.gap: int | None = None
     self.t = -1e9
 
   def get(self, personality: int) -> int:
     # falls back to the personality whenever the file is missing or disagrees with it
     now = time.monotonic()
-    if now - self.t > self.period:
+    stale = self.gap is None or gap_to_personality(self.gap) != personality
+    if now - self.t > (self.retry if stale else self.period):
       self.gap = read_gap(self.path)
       self.t = now
     if self.gap is None or gap_to_personality(self.gap) != personality:
