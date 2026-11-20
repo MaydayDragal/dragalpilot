@@ -1226,3 +1226,8 @@ Details: [docs/findings/2026-11-20-g70-gap-verification-fan-readout-pc-logs.md](
 - **Tools:** `pclog.py` reads rlogs on the PC (pycapnp, zstandard); `gap_check.py`, `gap_safety.py`, `gap_speed.py`, `render_fan_ui.py`, `render_screen_map.py`. `sway.py` setup list updated.
 - The comma was not reachable over wifi from the PC; pulled over USB.
 
+## 2026-11-20 (local time): fan readout off
+
+- **Device (user request):** `/data/g70_ui_fan` removed while parked, so the fan readout is no longer drawn. The code (`bb1c191`) stays; create the file and reboot to show it again.
+- Stopping the screen process to apply it did not bring it back (the manager does not restart it), so the comma was rebooted. It did not reappear over USB afterwards, so the screen after the reboot was not checked from the PC; the driver confirmed it came back on.
+
