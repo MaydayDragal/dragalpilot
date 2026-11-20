@@ -130,3 +130,15 @@ Reading logs on the PC: `pip install pycapnp zstandard`, then set `CEREAL_DIR` t
 - **A following time is not a gap.** The planner's desired distance at equal speeds is time x speed + 6 m + `g70_long_stop_extra`. Check a new setting with `gap_check.py` before describing it as a distance.
 - **Before adding anything to the driving screen**, run `render_screen_map.py`: an earlier change was checked against one neighbour and overlapped another.
 
+## Added 2026-11-20 (afternoon)
+
+| Script | Where | What it does |
+|---|---|---|
+| `restart_delay.py <recordings root> <route> ... [--trace]` | PC | every standstill behind a lead with openpilot longitudinal: when the lead starts, when the stop request is dropped, when the command goes positive, when the car moves and reaches 1 and 3 m/s, and the lead's head start. `--trace` prints each at 0.25 s steps. |
+| `replay_quick_start.py <checkout> <recordings root> <route> ...` | PC | runs `g70_long.QuickStart` from the checkout over logged drives: where it would start, against the logged stop release, and whether the lead really left. `EARLY=0.3` enables the early stage. The car's response is the logged one. |
+| `lat_state.py <lateral extract dir> <route> ...` | PC | per route: learned torque values and whether they are used, steer ratio, stiffness, angle offset, learned delay, lateral params, and basics above 60 mph |
+| `sway_vs_lead.py <lateral extract dir> <long extract dir> <route> ...` | PC | lane movement above 60 mph by lead distance and by the car's own acceleration |
+
+- **Whole-drive steering numbers depend on the route as much as on the setup.** Above 60 mph with curves included, lane movement ranged from 2.3 to 9.1 cm across drives with no relation to settings. Use the same-road section of `sway.py`, and prefer drives in the same direction at the same time of day.
+- **A delay can be the car's.** Before changing what is asked, check with `restart_delay.py --trace` how long the car takes after the request.
+

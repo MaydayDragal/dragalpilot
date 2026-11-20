@@ -16,6 +16,7 @@ GROUPS = [  # label, routes, stock?, following time, extra
     ("openpilot 1.05 s + 2 m", ["000000d6"], False, 1.05, 2.0),
     ("openpilot 0.99 s + 2 m", ["000000da", "000000db"], False, 0.99, 2.0),
     ("openpilot 0.75 s + 2 m", ["000000dc", "000000dd", "000000de"], False, 0.75, 2.0),
+    ("openpilot 0.69 s + 2 m", ["000000df", "000000e0"], False, 0.69, 2.0),
 ]
 BINS = np.arange(20, 90, 5)
 out = {"bins": [int(b) for b in BINS[:-1]], "groups": []}

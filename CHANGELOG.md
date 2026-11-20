@@ -1231,3 +1231,16 @@ Details: [docs/findings/2026-11-20-g70-gap-verification-fan-readout-pc-logs.md](
 - **Device (user request):** `/data/g70_ui_fan` removed while parked, so the fan readout is no longer drawn. The code (`bb1c191`) stays; create the file and reboot to show it again.
 - Stopping the screen process to apply it did not bring it back (the manager does not restart it), so the comma was rebooted. It did not reappear over USB afterwards, so the screen after the reboot was not checked from the PC; the driver confirmed it came back on.
 
+## 2026-11-20 afternoon (local time): restart delay, firm stops, 0.69 s driven, low-speed steering look-ahead
+
+Details: [docs/findings/2026-11-20-g70-restart-delay-stops-low-speed-steering.md](docs/findings/2026-11-20-g70-restart-delay-stops-low-speed-steering.md).
+
+- **Drives `df`, `e0`** (0.69 s gap): distance 25.7 / 28.8 / 32.0 m at 60-65 / 65-70 / 70-75 mph, within about 1.5 m of the setting. Stops behind a car now 4-5 m back (early stop request works). One slowdown at the -3.5 m/s2 limit behind a braking lead.
+- **Restart behind a lead** (`restart_delay.py`): first movement 1.5-2.15 s after the lead's.
+- **`bb68347`** (installed about 14:50): `g70_long.QuickStart`, `/data/g70_long_start` = `1.2`. Driven on `e1`: the request went out and the car still took 1.0-1.2 s to move; no gain.
+- **Drive `e1`:** highway steering the best since `d4` (ping-pong 2.4 per minute, large swings 0.37) with no steering change since the weaker morning drives. Stops end 3.2-5.5 m back with the last 2 s at -0.6 to -1.0 m/s2 (driver: firm, far back).
+- **Steering check** (`lat_state.py`, `sway_vs_lead.py`): no setting, learned value, timing, load or following-distance cause for the morning result. A suspected link to openpilot longitudinal is withdrawn after `e1`; the difference is the route.
+- **Device (about 17:05):** `/data/g70_long_stop_speed` `1.0` -> `0.6`. Not driven.
+- **`e3f7ac8`** (installed about 17:20): early restart stage (second number in `/data/g70_long_start`, set to `1.2 0.3`), and extra model look-ahead at low speed (`/data/g70_lat_lookahead_low` = `0.12 13 18`). Replayed over ten drives the early stage begins 0.2-0.8 s before the logged stop release; 4 of 19 starts are behind a lead that crept and stopped. Not driven.
+- **Tools:** `restart_delay.py`, `replay_quick_start.py`, `lat_state.py`, `sway_vs_lead.py`; setup lists in `sway.py`, `gap_check.py`, `gap_safety.py`, `gap_speed.py` updated.
+

@@ -8,7 +8,7 @@ import numpy as np
 import pclog
 
 ROOT = sys.argv[1]
-GROUPS = (("0.75 s (dc, dd, de)", ["000000dc", "000000dd", "000000de"]), ("0.99 s (da, db)", ["000000da", "000000db"]), ("1.05 s (d6)", ["000000d6"]))
+GROUPS = (("0.69 s (df, e0)", ["000000df", "000000e0"]), ("0.75 s (dc, dd, de)", ["000000dc", "000000dd", "000000de"]), ("0.99 s (da, db)", ["000000da", "000000db"]), ("1.05 s (d6)", ["000000d6"]))
 
 def seg_no(p): return int(re.split(r"--", os.path.basename(os.path.dirname(p)))[-1])
 
