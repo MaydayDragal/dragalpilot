@@ -39,7 +39,7 @@ STOP_SPEED_MIN = 0.3
 STOP_SPEED_MAX = 1.5
 STOP_SPEED_A_TARGET = -0.05   # m/s2: only while the plan is braking
 
-FOLLOW_MIN = 0.7   # with the fixed 6 m plus the extra distance, 0.75 s is about 1.0 s behind the lead at 72 mph
+FOLLOW_MIN = 0.6   # with the fixed 6 m plus the extra distance, 0.69 s is about 0.95 s behind the lead at 70 mph
 FOLLOW_MAX = 2.5
 STOP_EXTRA_MAX = 4.0
 CLUSTER_SPEED_MIN_V = 10.0       # m/s
