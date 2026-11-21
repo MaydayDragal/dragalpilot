@@ -1,6 +1,6 @@
 # G70 2024: a 1.0 m stop from the lower stop speed, the car's creep, a gentler final ramp, factor 4.5 → 4.2
 
-Covers 2026-11-21 from about 07:25 to 08:40 local time (US Eastern). Drives `000000e2` (07:26, 8 min) and `000000e3` (07:34, 9 min). Continues [2026-11-20-g70-hard-braking-behind-a-lead.md](2026-11-20-g70-hard-braking-behind-a-lead.md). Device identifiers and GPS are kept out of this repo.
+Covers 2026-11-21 from about 07:25 to 08:10 local time (US Eastern). Drives `000000e2` (07:26, 8 min) and `000000e3` (07:34, 9 min). Continues [2026-11-20-g70-hard-braking-behind-a-lead.md](2026-11-20-g70-hard-braking-behind-a-lead.md). Device identifiers and GPS are kept out of this repo.
 
 Statements are marked as observations (measured from logs or tests), inferences, or plans.
 
@@ -68,8 +68,8 @@ The driver set `TorqueParamsOverrideLatAccelFactor` from 4.5 to 4.2 between `e2`
 | When | Change |
 |---|---|
 | 2026-11-21, between `e2` and `e3` | driver: lateral acceleration factor override 4.5 → 4.2 in the settings |
-| 2026-11-21 about 08:10 | `/data/g70_long_stop_speed` `0.6` → `1.0` |
-| 2026-11-21 about 08:30 | `ac2bdcb` installed; `/data/g70_long_stop_soft` = `-0.8`; no reboot (read at the next ignition) |
+| 2026-11-21 about 07:55 | `/data/g70_long_stop_speed` `0.6` → `1.0` |
+| 2026-11-21 about 08:00 | `ac2bdcb` installed; `/data/g70_long_stop_soft` = `-0.8`; no reboot (read at the next ignition) |
 
 Current: `g70-fingerprint` @ `ac2bdcb`, rollback branch `g70-fingerprint-prev` = `e3f7ac8`.
 
