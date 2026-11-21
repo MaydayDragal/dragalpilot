@@ -1253,3 +1253,13 @@ Details: [docs/findings/2026-11-20-g70-hard-braking-behind-a-lead.md](docs/findi
 - **Plan source** (`plan_source.py`): the driving model's request is in the planner's choice with experimental mode off; it starts the braking in 23 of 38 stretches (all below about 55 mph). The strongest request comes from the lead plan (-3.0 to -3.5 where the model asks -1.05 to -2.2).
 - **Device (about 18:20, user-approved):** `/data/g70_long_follow` = `0.85 1.25 1.45 1.75`. No reboot needed. Not driven.
 
+## 2026-11-21 morning (local time): a 1.0 m stop, the car's creep, gentler final ramp, factor 4.5 -> 4.2
+
+Details: [docs/findings/2026-11-21-g70-close-stop-creep-soft-stop-ramp.md](docs/findings/2026-11-21-g70-close-stop-creep-soft-stop-ramp.md).
+
+- **Drives `e2`, `e3`.** The driver changed the lateral acceleration factor override from 4.5 to 4.2 between them; 3.8 and 2.4 minutes above 60 mph on different roads, not enough to judge. `e2` matched the previous morning on shared road.
+- **Stop 1.0 m behind a lead** (`e3`) with the stop request at 0.6 m/s: the car held 1.9-2.0 mph for 3 s against a request of -0.35 m/s2 and closed 2.8 m. The car creeps at about 0.9 m/s; the stop-request speed has to stay above that.
+- **Device (about 08:10):** `/data/g70_long_stop_speed` `0.6` -> `1.0`.
+- **`ac2bdcb`** (installed about 08:30): `g70_long.soft_stop_accel` in `longcontrol.py`; `/data/g70_long_stop_soft` = `-0.8` keeps the command from going below that while the car still rolls in its final stop. Never less braking than the plan or than already commanded; stock again after 2.5 s. Not driven.
+- Not tested on these drives: the 0.85 s gap (two bars were selected), the early restart release (needs 3 m of gap), the low-speed look-ahead (no hands-off driving under 45 mph).
+

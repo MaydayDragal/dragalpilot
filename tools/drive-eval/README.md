@@ -155,3 +155,8 @@ Reading logs on the PC: `pip install pycapnp zstandard`, then set `CEREAL_DIR` t
 - **Replay before recommending a planner change.** The unchanged replay matched the log at 0.999, a 28-minute route with four variants takes about ten minutes, and it showed in advance that a change would do nothing. A replay keeps the logged gap and car response, so it can show when the planner asks, not what a different following distance would do.
 - Onroad-only processes are not running while parked, so the replay loads the planner without disturbing anything; run it with `nice`.
 
+## Added 2026-11-21
+
+- **The car creeps at about 0.9 m/s (2 mph) against a weak braking request.** Any stop logic that waits for a lower speed lets it close on the lead. Check a stop with `gap_safety.py` (final gap, speed at the stop request) before and after changing it.
+- Setup lists in `sway.py`, `gap_check.py` and `gap_safety.py` now include `e2` / `e3`.
+
