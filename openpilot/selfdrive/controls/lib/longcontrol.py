@@ -4,6 +4,7 @@ from openpilot.common.realtime import DT_CTRL
 from openpilot.selfdrive.controls.lib.drive_helpers import CONTROL_N
 from openpilot.common.pid import PIDController
 from openpilot.selfdrive.modeld.constants import ModelConstants
+from openpilot.sunnypilot.selfdrive.controls.lib import g70_long
 
 CONTROL_N_T_IDX = ModelConstants.T_IDXS[:CONTROL_N]
 
@@ -47,6 +48,8 @@ class LongControl:
     self.pid = PIDController(0.0, (CP.longitudinalTuning.kiBP, CP.longitudinalTuning.kiV),
                              rate=1 / DT_CTRL)
     self.last_output_accel = 0.0
+    self.g70_stop_soft = g70_long.read_stop_soft()  # dragalpilot: None unless /data/g70_long_stop_soft exists
+    self.g70_stop_t = 0.0
 
   def reset(self):
     self.pid.reset()
@@ -61,17 +64,23 @@ class LongControl:
                                                        CS.cruiseState.standstill)
     if self.long_control_state == LongCtrlState.off:
       self.reset()
+      self.g70_stop_t = 0.0
       output_accel = 0.
 
     elif self.long_control_state == LongCtrlState.stopping:
       output_accel = self.last_output_accel
-      if output_accel > self.CP.stopAccel:
+      self.g70_stop_t += DT_CTRL
+      g70_soft = g70_long.soft_stop_accel(output_accel, a_target, CS.vEgo, self.g70_stop_t, self.g70_stop_soft, self.CP.stopAccel, DT_CTRL)
+      if g70_soft is not None:  # dragalpilot: gentler final stop while still rolling, see g70_long.soft_stop_accel
+        output_accel = g70_soft
+      elif output_accel > self.CP.stopAccel:
         output_accel = min(output_accel, 0.0)
         # TODO: can we just go straight to stopAccel?
         output_accel -= 1.0 * DT_CTRL  # m/s^2/s while trying to stop
       self.reset()
 
     else:  # LongCtrlState.pid
+      self.g70_stop_t = 0.0
       error = a_target - CS.aEgo
       output_accel = self.pid.update(error, speed=CS.vEgo,
                                      feedforward=a_target)

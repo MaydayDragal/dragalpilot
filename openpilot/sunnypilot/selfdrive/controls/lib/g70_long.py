@@ -39,6 +39,15 @@ No file means stock behaviour for that setting.
                               dropped with the small "early" acceleration, and the full one follows when the lead
                               meets the conditions above. Behind a lead that creeps and stops again the car rolls
                               a little before the plan stops it.
+  /data/g70_long_stop_soft    the strongest braking (m/s2, negative) the controller ramps to while the car is still
+                              rolling in its final stop. Stock ramps the command to -2.0 m/s2 at 1 m/s3 from the
+                              moment the stop is requested; with the request at 2.2 mph the last 2 s ran at -0.6 to
+                              -1.0 m/s2 (about -0.2 with the stock 0.7 mph request). The request cannot simply come
+                              later: the car creeps at about 0.9 m/s against a weak request and, with a 0.6 m/s
+                              request speed, stopped 1.0 m behind a lead (route e3). With this file the command
+                              goes no lower than the value until the car is below 0.15 m/s, then ramps to the hold
+                              value as stock. It never asks for less braking than the plan or than it already
+                              asks, and gives up after 2.5 s.
   /data/g70_long_gap          written by selfdrived: the current gap setting (0-3) when four are in use.
 """
 import os
@@ -54,6 +63,11 @@ STOP_SPEED_MIN = 0.3
 STOP_SPEED_MAX = 1.5
 STOP_SPEED_A_TARGET = -0.05   # m/s2: only while the plan is braking
 
+STOP_SOFT_FILE = "/data/g70_long_stop_soft"
+STOP_SOFT_RANGE = (-1.5, -0.4)   # m/s2
+STOP_SOFT_V = 0.15               # m/s: below this the stock ramp to the hold value takes over
+STOP_SOFT_MAX_T = 2.5            # s
+STOP_SOFT_RATE = 1.0             # m/s3, as stock
 START_FILE = "/data/g70_long_start"
 START_ACCEL_MIN = 0.5
 START_ACCEL_MAX = 1.5
@@ -277,3 +291,25 @@ class QuickStart:
     if not self.active:
       return None
     return min(self.accel if self.full else self.early, a_cruise)
+
+
+def read_stop_soft(path: str = STOP_SOFT_FILE) -> float | None:
+  try:
+    with open(path) as f:
+      value = float(f.read().split()[0])
+  except (OSError, ValueError, IndexError):
+    return None
+  if value != value:  # NaN
+    return None
+  return min(max(value, STOP_SOFT_RANGE[0]), STOP_SOFT_RANGE[1])
+
+
+def soft_stop_accel(output_accel: float, a_target: float, v_ego: float, t_stopping: float, floor: float | None,
+                    stop_accel: float, dt: float) -> float | None:
+  """The command for one control step of a final stop while the car still rolls, or None when stock applies."""
+  if floor is None or v_ego < STOP_SOFT_V or t_stopping > STOP_SOFT_MAX_T:
+    return None
+  out = min(output_accel, 0.0)
+  if out > floor:
+    out = max(out - STOP_SOFT_RATE * dt, floor)
+  return max(min(out, a_target), stop_accel)
