@@ -160,3 +160,13 @@ Reading logs on the PC: `pip install pycapnp zstandard`, then set `CEREAL_DIR` t
 - **The car creeps at about 0.9 m/s (2 mph) against a weak braking request.** Any stop logic that waits for a lower speed lets it close on the lead. Check a stop with `gap_safety.py` (final gap, speed at the stop request) before and after changing it.
 - Setup lists in `sway.py`, `gap_check.py` and `gap_safety.py` now include `e2` / `e3`.
 
+## Added 2026-11-21 (evening)
+
+| Script | Where | What it does |
+|---|---|---|
+| `mdps12_check.py <recordings root> <route> [max segments]` | PC | on the steering unit's MDPS12 frames: does the CRC8 reproduce byte 3, does the counter step by one, are bits set outside the DBC signals; on frames openpilot sent to the camera: checksum, counter, and which fields differ from the car's latest frame |
+
+- **Logs from another branch:** copy that branch's `openpilot/cereal/*.capnp` (with `include/`) and `opendbc/car/car.capnp` to a folder and point `CEREAL_DIR` / `CAR_CAPNP_DIR` at it. Do not import `opendbc.car` and `pclog` in one process: both load `car.capnp` and Python exits without a message; dump the frames with one script and test with another.
+- **Before re-sending a message, check the bits no signal covers.** MDPS12 always carries three (32-34); a re-pack from the DBC silently dropped them.
+- `sway.py`: the setup list now compares our recent drives with `g70-2024-new`.
+

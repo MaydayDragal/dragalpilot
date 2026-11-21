@@ -1263,3 +1263,14 @@ Details: [docs/findings/2026-11-21-g70-close-stop-creep-soft-stop-ramp.md](docs/
 - **`ac2bdcb`** (installed about 08:00): `g70_long.soft_stop_accel` in `longcontrol.py`; `/data/g70_long_stop_soft` = `-0.8` keeps the command from going below that while the car still rolls in its final stop. Never less braking than the plan or than already commanded; stock again after 2.5 s. Not driven.
 - Not tested on these drives: the 0.85 s gap (two bars were selected), the early restart release (needs 3 m of gap), the low-speed look-ahead (no hands-off driving under 45 mph).
 
+## 2026-11-21 (local time): sunnypilot g70-2024-new tested, MDPS12 relay and SCC14 counter ported
+
+Details: [docs/findings/2026-11-21-g70-sunnypilot-g70-2024-new-test-and-port.md](docs/findings/2026-11-21-g70-sunnypilot-g70-2024-new-test-and-port.md).
+
+- **Driver installed sunnypilot `g70-2024-new` @ `ffb5a06`** (a full reset of the comma). Same firmware fingerprint as ours; factor 3.45, friction 0.09, steering ratio 15.0, a damping feed-forward above 45 mph, MDPS12 spoofed to the camera, SCC14 counter and checksum.
+- **Drive `00000003` on it:** no faults or grasp warning. Fast steering wobble 92-101 per minute above 60 mph (ours on the same road 2.3-7.7); torque command reversing about 190 times a minute above 70 mph and 134 below 45 mph. Cluster 1.45 mph over the set speed; crept to 0.7 m behind a stopped car. Feedback drafted for the driver to post.
+- **Steering ratio by wheel angle** from the logs: 13.75-14.4 near centre, about 11 beyond half a turn.
+- **`87ae226`, `cf0e989`, `2a81f61`** on `sunnypilot/g70-scc11-filter`: MDPS12 (`0x251`) blocked towards the camera and relayed by openpilot, unchanged unless `/data/g70_cam_mdps12` exists (then "steering assist unavailable"); SCC14 counter and checksum with `/data/g70_long_scc14_counter`; `CF_Mdps_Rsv32` for the three bits the steering unit always sets. Checked on 72,179 logged frames; safety tests 9232 OK on the comma; firmware `cb6201ae…` (signature `9209954232d5bbba`).
+- **About 18:10:** our branch `2a81f61` put back on the comma from GitHub, panda flashed, option files and settings written back from the notes, both new options off. Not driven. The other install is kept at `/data/openpilot_g70new`.
+- **Tools:** `mdps12_check.py`; `sway.py` setup list rewritten.
+
