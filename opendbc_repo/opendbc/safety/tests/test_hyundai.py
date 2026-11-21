@@ -258,9 +258,9 @@ class TestHyundaiSafetyAltLimits2(TestHyundaiSafety):
 class TestHyundaiSafetyCameraSCC(TestHyundaiSafety):
   SAFETY_PARAM = HyundaiSafetyFlags.CAMERA_SCC
 
-  TX_MSGS = [[0x340, 0], [0x4F1, 2], [0x484, 0], [0x485, 0], [0x53E, 0], [0x420, 0]]
-  RELAY_MALFUNCTION_ADDRS = {0: (0x340, 0x484, 0x485, 0x53E, 0x420)}  # LKAS11, HDA11_MFC, LFAHDA_MFC, LKAS12, SCC11
-  FWD_BLACKLISTED_ADDRS = {2: [0x340, 0x484, 0x485, 0x53E, 0x420]}
+  TX_MSGS = [[0x340, 0], [0x4F1, 2], [0x484, 0], [0x485, 0], [0x53E, 0], [0x420, 0], [0x251, 2]]
+  RELAY_MALFUNCTION_ADDRS = {0: (0x340, 0x484, 0x485, 0x53E, 0x420), 2: (0x251,)}  # LKAS11, HDA11_MFC, LFAHDA_MFC, LKAS12, SCC11; MDPS12
+  FWD_BLACKLISTED_ADDRS = {0: [0x251], 2: [0x340, 0x484, 0x485, 0x53E, 0x420]}
   BUTTONS_TX_BUS = 2  # tx on 2, rx on 0
   SCC_BUS = 2  # rx on 2
 
@@ -378,11 +378,11 @@ class TestHyundaiLongitudinalSafety(HyundaiLongitudinalBase, TestHyundaiSafety):
 class TestHyundaiLongitudinalSafetyCameraSCC(HyundaiLongitudinalBase, TestHyundaiSafety):
   SAFETY_PARAM = HyundaiSafetyFlags.LONG | HyundaiSafetyFlags.CAMERA_SCC
 
-  TX_MSGS = [[0x340, 0], [0x4F1, 2], [0x485, 0], [0x420, 0], [0x421, 0], [0x50A, 0], [0x389, 0], [0x4A2, 0], [0x484, 0], [0x53E, 0]]
+  TX_MSGS = [[0x340, 0], [0x4F1, 2], [0x485, 0], [0x420, 0], [0x421, 0], [0x50A, 0], [0x389, 0], [0x4A2, 0], [0x484, 0], [0x53E, 0], [0x251, 2]]
 
-  FWD_BLACKLISTED_ADDRS = {2: [0x340, 0x485, 0x420, 0x421, 0x50A, 0x389, 0x484, 0x53E]}
+  FWD_BLACKLISTED_ADDRS = {0: [0x251], 2: [0x340, 0x485, 0x420, 0x421, 0x50A, 0x389, 0x484, 0x53E]}
   # LKAS11, LFAHDA_MFC, SCC12, SCC11, SCC13, SCC14, HDA11_MFC, LKAS12
-  RELAY_MALFUNCTION_ADDRS = {0: (0x340, 0x485, 0x421, 0x420, 0x50A, 0x389, 0x484, 0x53E)}
+  RELAY_MALFUNCTION_ADDRS = {0: (0x340, 0x485, 0x421, 0x420, 0x50A, 0x389, 0x484, 0x53E), 2: (0x251,)}
 
   def setUp(self):
     super().setUp()

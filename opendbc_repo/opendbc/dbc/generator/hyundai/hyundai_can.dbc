@@ -813,6 +813,7 @@ BO_ 593 MDPS12: 8 MDPS
  SG_ CF_Mdps_FailStat : 15|1@1+ (1.0,0.0) [0.0|1.0] ""  LDWS_LKAS
  SG_ CF_Mdps_MsgCount2 : 16|8@1+ (1.0,0.0) [0.0|255.0] ""  ESC,LDWS_LKAS
  SG_ CF_Mdps_Chksum2 : 24|8@1+ (1.0,0.0) [0.0|255.0] ""  ESC,LDWS_LKAS
+ SG_ CF_Mdps_Rsv32 : 32|3@1+ (1.0,0.0) [0.0|7.0] ""  XXX
  SG_ CF_Mdps_SErr : 37|1@1+ (1.0,0.0) [0.0|1.0] ""  ESC
  SG_ CR_Mdps_StrTq : 40|12@1+ (0.01,-20.48) [-20.48|20.47] "Nm"  ESC
  SG_ CR_Mdps_OutTq : 52|12@1+ (0.1,-204.8) [-204.8|204.7] ""  ESC,LDWS_LKAS
@@ -1488,6 +1489,8 @@ BO_ 905 SCC14: 8 SCC
  SG_ ACCMode : 32|3@1+ (1,0) [0|7] "" CLU,HUD,LDWS_LKAS,ESC
  SG_ ObjGap : 56|8@1+ (1,0) [0|255] "" CLU,HUD,ESC
  SG_ ObjDistStat : 42|2@1+ (1,0) [0|3] "" XXX
+ SG_ AliveCounter : 48|4@1+ (1,0) [0|15] "" ESC
+ SG_ Checksum : 52|4@1+ (1,0) [0|15] "" ESC
 
 BO_ 1157 LFAHDA_MFC: 4 XXX
  SG_ HDA_USM : 0|2@1+ (1,0) [0|3] "" XXX

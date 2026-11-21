@@ -311,12 +311,14 @@ static safety_config hyundai_init(uint16_t param) {
     {0x484, 0, 8, .check_relay = true},  // HDA11_MFC Bus 0: block the camera's copy to suppress "grasp not detected" (commaai/panda#2045)
     {0x53E, 0, 8, .check_relay = true},  // LKAS12 Bus 0: block the camera's copy; openpilot re-sends it without the DAW "take a break" warning
     {0x420, 0, 8, .check_relay = true},  // SCC11 Bus 0: block the camera's copy; openpilot re-sends each frame, optionally without the standstill prompt
+    {0x251, 2, 8, .check_relay = true},  // MDPS12 Bus 2: block the car's copy to the camera; openpilot re-sends it, optionally as "steering assist unavailable" (sunnypilot g70-2024-new)
   };
 
   static const CanMsg HYUNDAI_CAMERA_SCC_LONG_TX_MSGS[] = {
     HYUNDAI_LONG_COMMON_TX_MSGS(2)
     {0x484, 0, 8, .check_relay = true},  // HDA11_MFC Bus 0: block the camera's copy, as with stock longitudinal ("grasp not detected")
     {0x53E, 0, 8, .check_relay = true},  // LKAS12 Bus 0: block the camera's copy; openpilot re-sends it without the DAW "take a break" warning
+    {0x251, 2, 8, .check_relay = true},  // MDPS12 Bus 2: as with stock longitudinal
   };
 
   static const CanMsg HYUNDAI_LONG_ESCC_TX_MSGS[] = {

@@ -72,6 +72,8 @@ class CarState(CarStateBase, EsccCarStateBase, MadsCarState, CarStateExt):
     # camera SCC11, re-sent by the car controller (G70 2024, stock longitudinal); see hyundaican.scc11_info_filter
     self.scc11 = {}
     self.scc11_ts_nanos = 0
+    self.mdps12 = {}  # dragalpilot: re-sent to the camera, see hyundaican.create_camera_mdps12
+    self.mdps12_ts_nanos = 0
     # G70 2024, openpilot longitudinal: the main button engages at the current speed (see hyundaican.py)
     self.g70_engage_main = (CP.carFingerprint == CAR.GENESIS_G70_2024 and bool(CP.openpilotLongitudinalControl) and
                             hyundaican.long_engage_main_enabled())
@@ -211,6 +213,8 @@ class CarState(CarStateBase, EsccCarStateBase, MadsCarState, CarStateExt):
     if self.CP.carFingerprint == CAR.GENESIS_G70_2024:
       self.lkas12 = copy.copy(cp_cam.vl["LKAS12"])
       self.lkas12_ts_nanos = cp_cam.ts_nanos["LKAS12"]["CF_LkasDawStatus"]
+      self.mdps12 = copy.copy(cp.vl["MDPS12"])
+      self.mdps12_ts_nanos = cp.ts_nanos["MDPS12"]["CR_Mdps_StrColTq"]
       if not self.CP.openpilotLongitudinalControl:
         self.scc11 = copy.copy(cp_cam.vl["SCC11"])
         self.scc11_ts_nanos = cp_cam.ts_nanos["SCC11"]["AliveCounterACC"]

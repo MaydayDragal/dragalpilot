@@ -243,6 +243,40 @@ def create_scc11_passthrough(packer, values):
   return packer.make_can_msg("SCC11", 0, values)
 
 
+# SCC14 (0x389, openpilot longitudinal): see get_scc14_values below.
+SCC14_COUNTER_FILE = "/data/g70_long_scc14_counter"
+SCC14_COUNTER = os.path.exists(SCC14_COUNTER_FILE)
+
+# MDPS12 (0x251, steering unit, 100 Hz, 8 bytes) to the camera, after sunnypilot's g70-2024-new branch (camera_scc.py).
+# On the G70 2024 the panda blocks the car's copy on its way to the camera (bus 2) and the car controller sends each
+# frame there itself with a new counter and checksum. Unchanged otherwise, unless /data/g70_cam_mdps12 exists: then
+# CF_Mdps_ToiActive is sent as 0 and CF_Mdps_ToiUnavail as 1, so the camera takes steering assist as unavailable and
+# does not start its hands-off sequence ("grasp not detected", then the driving speed limit). Blocking the camera's
+# HDA11_MFC, as this branch has done so far, only keeps that sequence off the cluster. openpilot keeps reading the
+# steering unit's own message on bus 0. Checksum: CRC8 over the frame without byte 3; it reproduces byte 3 of every
+# logged frame from the steering unit (tools/drive-eval/mdps12_check.py). Bits 32-34 are always set by the steering
+# unit and are in no upstream signal; CF_Mdps_Rsv32 carries them so the unchanged re-send is bit-exact.
+CAM_MDPS12_FILE = "/data/g70_cam_mdps12"
+
+
+def cam_mdps12_spoof_enabled(path: str = CAM_MDPS12_FILE) -> bool:
+  return os.path.exists(path)
+
+
+def create_camera_mdps12(packer, frame, CP, mdps12: dict, spoof: bool):
+  values = dict(mdps12)
+  if spoof:
+    values["CF_Mdps_ToiActive"] = 0
+    values["CF_Mdps_ToiUnavail"] = 1
+    values["CF_Mdps_Rsv32"] = 0  # as g70-2024-new sends it; the steering unit itself always sends 7 here
+  values["CF_Mdps_MsgCount2"] = frame % 0x100
+  values["CF_Mdps_Chksum2"] = 0
+  dat = packer.make_can_msg("MDPS12", 2, values)[1]
+  payload = dat[:3] + dat[4:]
+  values["CF_Mdps_Chksum2"] = hyundai_checksum(payload) if CP.flags & HyundaiFlags.CHECKSUM_CRC8 else sum(payload) % 256
+  return packer.make_can_msg("MDPS12", 2, values)
+
+
 def create_acc_commands(packer, enabled, accel, upper_jerk, idx, lead_data: CanLeadData,
                         hud_control, set_speed, stopping, long_override, use_fca, CP,
                         main_cruise_enabled, tuning, ESCC: EnhancedSmartCruiseControl | None = None):
@@ -288,7 +322,7 @@ def create_acc_commands(packer, enabled, accel, upper_jerk, idx, lead_data: CanL
     return values
 
   def get_scc14_values():
-    return {
+    scc14_values = {
       "ComfortBandUpper": tuning.comfort_band_upper, # stock usually is 0 but sometimes uses higher values
       "ComfortBandLower": tuning.comfort_band_lower, # stock usually is 0 but sometimes uses higher values
       "JerkUpperLimit": tuning.jerk_upper, # stock usually is 1.0 but sometimes uses higher values
@@ -297,6 +331,13 @@ def create_acc_commands(packer, enabled, accel, upper_jerk, idx, lead_data: CanL
       "ObjGap": lead_data.object_gap, # 5: >30, m, 4: 25-30 m, 3: 20-25 m, 2: < 20 m, 0: no lead
       "ObjDistStat": lead_data.object_rel_gap,
     }
+    # dragalpilot: rolling counter and checksum as sunnypilot's g70-2024-new branch sends them, when
+    # /data/g70_long_scc14_counter exists (read once at import). Without the file the two fields stay 0 as before.
+    if SCC14_COUNTER and CP.carFingerprint == CAR.GENESIS_G70_2024:
+      scc14_values["AliveCounter"] = idx % 0xF
+      scc14_dat = packer.make_can_msg("SCC14", 0, scc14_values)[1]
+      scc14_values["Checksum"] = (0x10 - sum(sum(divmod(i, 16)) for i in scc14_dat) % 0x10) % 0x10
+    return scc14_values
 
   def get_fca11_values():
     return {
