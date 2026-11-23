@@ -45,6 +45,7 @@ SETUPS = {
     "ours: factor 4.5 (e2)": ["000000e2"],
     "ours: factor 4.2 (e3)": ["000000e3"],
     "g70-2024-new (ffb5a06)": ["00000003"],
+    "ours 2a81f61, factor 4.2 (05, 06)": ["00000005", "00000006"],
 }
 SPEEDS = (("20-45 mph", 8.9, 20.1), ("45-60 mph", 20.1, 26.8), (">60 mph", 26.8, 99.0))
 HYST = 0.03       # m, reversals smaller than this do not end a swing

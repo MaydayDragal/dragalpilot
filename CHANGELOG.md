@@ -1274,3 +1274,13 @@ Details: [docs/findings/2026-11-21-g70-sunnypilot-g70-2024-new-test-and-port.md]
 - **About 18:10:** our branch `2a81f61` put back on the comma from GitHub, panda flashed, option files and settings written back from the notes, both new options off. Not driven. The other install is kept at `/data/openpilot_g70new`.
 - **Tools:** `mdps12_check.py`; `sway.py` setup list rewritten.
 
+## 2026-11-22 (local time): MDPS12 relay driven, factor 4.2 and look-ahead measured, sunnypilot's update installed for a retest
+
+Details: [docs/findings/2026-11-22-g70-mdps12-relay-driven-sunnypilot-retest-install.md](docs/findings/2026-11-22-g70-mdps12-relay-driven-sunnypilot-retest-install.md).
+
+- **Drives `00000005`, `00000006`** (2026-11-21 evening, our `2a81f61`, both new options off): 151,816 MDPS12 frames relayed to the camera, all with valid checksums, no gap over 23 ms, no relay fault, nothing new on the cluster or in the events. The counter skipped a step on about 4 % of frames.
+- **Soft stop ramp:** command held at -0.8 m/s2 while rolling (down to -1.9 before); last 2 s mean -0.50 to -0.62 (before -0.60 to -0.70); three stops, 4.2-6.5 m back. **Restart:** first movement 1.5 and 1.8 s after the lead.
+- **Steering at factor 4.2** (after dark): ping-pong 5.1 per minute above 60 mph and 1.7 trains per 10 min; worse than 4.5 on the two afternoon-route comparisons. 30-45 mph with the low-speed look-ahead: 31 wheel swings per minute against 14.
+- **`1064526`** on `sunnypilot/g70-scc11-filter`: the relay uses its own counter, one step per frame sent. In the kept copy on the comma; not driven.
+- **Device:** `/data/g70_lat_lookahead_low` removed. sunnypilot `g70-2024-new` @ `4e6c248` (damping feed-forward removed) installed unmodified, steering settings at its defaults, panda flashed to its firmware; our branch kept at `/data/openpilot_ours`.
+
