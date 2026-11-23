@@ -170,3 +170,9 @@ Reading logs on the PC: `pip install pycapnp zstandard`, then set `CEREAL_DIR` t
 - **Before re-sending a message, check the bits no signal covers.** MDPS12 always carries three (32-34); a re-pack from the DBC silently dropped them.
 - `sway.py`: the setup list now compares our recent drives with `g70-2024-new`.
 
+## Added 2026-11-23
+
+- **Compare tunes in torque counts, not in factor and friction.** Both are fractions of the car's maximum torque: factor 2.5 at a 270-count limit is 108 counts per m/s2, factor 3.45 at 384 is 111. The friction snap near zero is friction x maximum / ramp width.
+- **Before trying a borrowed steering model, sample its reaction to fast changes** (the lateral jerk input), not only its steady output.
+- `sway.py`: the setup list now holds the standard-value tests on sunnypilot's branch.
+

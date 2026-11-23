@@ -1284,3 +1284,13 @@ Details: [docs/findings/2026-11-22-g70-mdps12-relay-driven-sunnypilot-retest-ins
 - **`1064526`** on `sunnypilot/g70-scc11-filter`: the relay uses its own counter, one step per frame sent. In the kept copy on the comma; not driven.
 - **Device:** `/data/g70_lat_lookahead_low` removed. sunnypilot `g70-2024-new` @ `4e6c248` (damping feed-forward removed) installed unmodified, steering settings at its defaults, panda flashed to its firmware; our branch kept at `/data/openpilot_ours`.
 
+## 2026-11-22 evening to 2026-11-23 (local time): standard-value steering tests on sunnypilot's branch, its third tune installed
+
+Details: [docs/findings/2026-11-23-g70-sunnypilot-branch-standard-value-tests.md](docs/findings/2026-11-23-g70-sunnypilot-branch-standard-value-tests.md).
+
+- **`00000007`, `00000008`** (`g70-2024-new` @ `4e6c248` as published): highway wobble 12 per minute (first test 100), torque command still reversing about 100 times a minute above 70 mph, 20-45 mph unchanged, no faults. Feedback drafted for the driver.
+- **Local edits of the standard values only** (never committed): 4.5 / 0.04 (`00000009`, `0000000a`) removed most of the chatter and added about 40 % lane movement; 4.0 / 0.04 (`0000000c`) kept the chatter low and brought the large swings to 0.27 per minute, the best setup; 20-45 mph improved on none.
+- **Neural-network control with the older G70's model** (`0000000b`): about 230 torque reversals a minute, a take-over every 26 s. Switched off.
+- **Looked up:** the per-car torque hook has no speed input; no public routes for this car other than the owner's own from February 2024.
+- **Device (2026-11-23):** local edits discarded; sunnypilot `g70-2024-new` @ `9dd31d0` installed unmodified (factor 2.5, friction 0.055, torque limit 270 with rate limits 2 / 3; in torque counts about the same steering strength as before with the friction snap cut from 173 to 74). Not driven.
+
