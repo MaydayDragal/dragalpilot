@@ -1294,3 +1294,11 @@ Details: [docs/findings/2026-11-23-g70-sunnypilot-branch-standard-value-tests.md
 - **Looked up:** the per-car torque hook has no speed input; no public routes for this car other than the owner's own from February 2024.
 - **Device (2026-11-23):** local edits discarded; sunnypilot `g70-2024-new` @ `9dd31d0` installed unmodified (factor 2.5, friction 0.055, torque limit 270 with rate limits 2 / 3; in torque counts about the same steering strength as before with the friction snap cut from 173 to 74). Not driven.
 
+## 2026-11-23 morning (local time): first drive on sunnypilot's third tune
+
+Details: [docs/findings/2026-11-23-g70-sunnypilot-third-tune-drive.md](docs/findings/2026-11-23-g70-sunnypilot-third-tune-drive.md).
+
+- **Drive `0000000d`** (`g70-2024-new` @ `9dd31d0`, unmodified): above 60 mph ping-pong 2.2 per minute (ours 2.4), lane movement 3.5 cm (ours 3.0), fast wobble 7.9 per minute (its second tune 12.0, the local 4.0 / 0.04 test 2.0, ours 2.7); the loop still over-answers at 0.7-1 Hz. 20-45 mph: 30 wheel swings and 118 torque reversals per minute (ours 17 and 33). Torque command at most 37 % of the 270 limit.
+- **Bookmarks:** highway hunting at 71 mph (44 cm of lane range in 40 s); the camera's lead-departure flag for 4.1 s, which that branch forwards to the cluster and ours clears.
+- No device change. Feedback drafted for the driver; suggested next step on that branch is a factor of about 2.8.
+
