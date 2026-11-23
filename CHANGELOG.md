@@ -1310,3 +1310,13 @@ Details: [docs/findings/2026-11-23-g70-factor-2.8-test-sunnypilot-fourth-tune.md
 - **Same road as our branch** (about 2 minutes): lane movement 4.6-4.8 cm against 1.8-2.7 cm.
 - **sunnypilot pushed `f239548`:** factor 2.5 -> 2.7, nothing else. Installed unmodified, rebooted. Not driven.
 
+## 2026-11-23 evening (local time): sunnypilot's fourth tune (2.7) driven, live watch, take-a-break warning, a correction
+
+Details: [docs/findings/2026-11-23-g70-sunnypilot-fourth-tune-drive-daw.md](docs/findings/2026-11-23-g70-sunnypilot-fourth-tune-drive-daw.md).
+
+- **Drive `0000000f`** (`g70-2024-new` @ `f239548`, unmodified): on 11.4-11.5 minutes of road shared with our `d4` and `e1`, ping-pong 6.9-7.2 per minute against 3.2-3.4, lane movement 3.2-3.3 cm against 2.2-2.3, wobble 3.1-3.4 against 1.1-1.2. Above 60 mph wobble 4.2 per minute and ping-pong 6.9, its highest; below 60 mph its calmest (20-45 mph: 30 torque reversals and 8.5 wheel swings per minute; ours 33 and 17).
+- **Live watch:** with the PC on a hotspot travelling with the car, a small read-only script on the comma reported steering once a minute for 12 minutes of the drive.
+- **Take-a-break warning** at the driver's bookmark: camera LKAS12 status 6 with bit 44 for 3.9 s, forwarded unchanged by that branch.
+- **Correction:** the reading that the camera's attention state stayed at its lowest level on that branch (2026-11-21, repeated on 2026-11-22 and 2026-11-23) used the wrong LKAS12 field and is withdrawn; the MDPS12 spoof does not stop the take-a-break warning. The three documents are marked.
+- No device change.
+

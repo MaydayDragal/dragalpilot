@@ -27,7 +27,7 @@ Statements are marked as observations (measured from logs or tests), inferences,
 
 - About 94–96 % of the steering unit's frames are relayed: when two arrive within one control cycle only the newer is sent.
 - Panda: no relay malfunction, no invalid RX. Events and alerts: nothing new (`cruiseMismatch`, overrides, lane changes, gear and door events).
-- Camera LKAS12 status as on earlier drives on our branch (levels 1 and 3); no warning. No cruise-held stop with the standstill prompt.
+- Camera LKAS12 status as on earlier drives on our branch (levels 1 and 3); no warning. **Corrected 2026-11-23:** this reading used the wrong field (the attention status is bits 40-42) and is withdrawn; see [2026-11-23-g70-sunnypilot-fourth-tune-drive-daw.md](2026-11-23-g70-sunnypilot-fourth-tune-drive-daw.md) section 5. No cruise-held stop with the standstill prompt.
 - **Counter:** it was the control frame number, so it stepped by two whenever a control frame had nothing new to send. **`1064526`:** the car controller keeps its own counter, one step per frame sent. Not driven.
 
 ## 3. Stops, restarts, speed control (observations)

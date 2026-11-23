@@ -71,7 +71,7 @@ Torque-command reversals of 0.05 or more per minute (1–6 Hz) / steering-wheel 
 
 - Driver: `00000007` / `00000008` highway much better than the first test; the NN drive "pretty bad"; `0000000c` "probably best yet tonight".
 - Bookmarks on `00000007` at 10:50 (77 mph, 117 torque reversals per minute in the 20 s before), 13:54 (70 mph, steering calm), 17:15 (62 mph), and on `00000008` at 4:22 (67 mph, braking to −1.6 m/s²).
-- `00000007` / `00000008`: no faults or unexpected messages; camera LKAS12 at its lowest level throughout; cluster 1.5–1.7 mph above the set speed; median time gap 1.83 s.
+- `00000007` / `00000008`: no faults or unexpected messages; camera LKAS12 at its lowest level throughout (**corrected 2026-11-23:** wrong field, withdrawn; see the fourth-tune drive findings, section 5); cluster 1.5–1.7 mph above the set speed; median time gap 1.83 s.
 
 ## 4. Reading (inferences)
 

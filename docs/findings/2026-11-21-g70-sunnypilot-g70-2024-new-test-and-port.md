@@ -62,7 +62,7 @@ Statements are marked as observations (measured from logs, code or tests), infer
 | Camera LKAS12, low three bits of byte 0 | 1 on 20 % of frames, 3 on 80 % | 1 on every frame |
 | Camera SCC11 standstill prompt bit | 2,642 frames | 0 (no cruise-held stop) |
 
-- **Inference:** with the steering unit reported as unavailable, the camera's attention state did not move off its lowest level. One drive; the field position is taken from earlier notes.
+- **Inference:** with the steering unit reported as unavailable, the camera's attention state did not move off its lowest level. One drive; the field position is taken from earlier notes. **Corrected 2026-11-23:** this reading used the wrong field (the attention status is bits 40-42) and is withdrawn; see [2026-11-23-g70-sunnypilot-fourth-tune-drive-daw.md](2026-11-23-g70-sunnypilot-fourth-tune-drive-daw.md) section 5.
 
 ## 4. What was ported (`87ae226`, `cf0e989`, `2a81f61`)
 
