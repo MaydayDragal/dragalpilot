@@ -81,6 +81,7 @@ class CarController(CarControllerBase, CcncCarController, EsccCarController, Lea
     self.scc11_filter = hyundaican.scc11_filter_enabled()  # read once at start
     self.cam_mdps12_spoof = hyundaican.cam_mdps12_spoof_enabled()  # read once at start
     self.mdps12_sent_ts_nanos = 0  # timestamp of the last MDPS12 frame that was re-sent to the camera
+    self.mdps12_count = 0  # own counter: one step per frame sent, also when a control frame had nothing new to send
     # openpilot longitudinal only: hide the camera's lead-departure announcement (read once at start)
     self.long_no_lead_alert = bool(CP.openpilotLongitudinalControl) and hyundaican.long_no_lead_alert_enabled()
     self.now_nanos = 0
@@ -215,7 +216,8 @@ class CarController(CarControllerBase, CcncCarController, EsccCarController, Lea
     # Re-send each new frame once, and stop when the steering unit's frame is older than 0.1 s.
     if self.car_fingerprint == CAR.GENESIS_G70_2024 and CS.mdps12_ts_nanos > 0:
       if CS.mdps12_ts_nanos != self.mdps12_sent_ts_nanos and (self.now_nanos - CS.mdps12_ts_nanos) < 0.1e9:
-        can_sends.append(hyundaican.create_camera_mdps12(self.packer, self.frame, self.CP, CS.mdps12, self.cam_mdps12_spoof))
+        can_sends.append(hyundaican.create_camera_mdps12(self.packer, self.mdps12_count, self.CP, CS.mdps12, self.cam_mdps12_spoof))
+        self.mdps12_count += 1
         self.mdps12_sent_ts_nanos = CS.mdps12_ts_nanos
 
     # 50 Hz SCC11: the panda blocks the camera's copy (G70 2024, camera SCC, stock longitudinal). Re-send each new

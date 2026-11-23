@@ -256,6 +256,8 @@ SCC14_COUNTER = os.path.exists(SCC14_COUNTER_FILE)
 # steering unit's own message on bus 0. Checksum: CRC8 over the frame without byte 3; it reproduces byte 3 of every
 # logged frame from the steering unit (tools/drive-eval/mdps12_check.py). Bits 32-34 are always set by the steering
 # unit and are in no upstream signal; CF_Mdps_Rsv32 carries them so the unchanged re-send is bit-exact.
+# The counter is the car controller's own, one step per frame sent: counting control frames instead skipped a step
+# on about 4 % of frames (routes 00000005, 00000006), whenever a control frame had no new MDPS12 to send.
 CAM_MDPS12_FILE = "/data/g70_cam_mdps12"
 
 
@@ -263,13 +265,13 @@ def cam_mdps12_spoof_enabled(path: str = CAM_MDPS12_FILE) -> bool:
   return os.path.exists(path)
 
 
-def create_camera_mdps12(packer, frame, CP, mdps12: dict, spoof: bool):
+def create_camera_mdps12(packer, count, CP, mdps12: dict, spoof: bool):
   values = dict(mdps12)
   if spoof:
     values["CF_Mdps_ToiActive"] = 0
     values["CF_Mdps_ToiUnavail"] = 1
     values["CF_Mdps_Rsv32"] = 0  # as g70-2024-new sends it; the steering unit itself always sends 7 here
-  values["CF_Mdps_MsgCount2"] = frame % 0x100
+  values["CF_Mdps_MsgCount2"] = count % 0x100
   values["CF_Mdps_Chksum2"] = 0
   dat = packer.make_can_msg("MDPS12", 2, values)[1]
   payload = dat[:3] + dat[4:]
