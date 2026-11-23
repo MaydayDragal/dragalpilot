@@ -1302,3 +1302,11 @@ Details: [docs/findings/2026-11-23-g70-sunnypilot-third-tune-drive.md](docs/find
 - **Bookmarks:** highway hunting at 71 mph (44 cm of lane range in 40 s); the camera's lead-departure flag for 4.1 s, which that branch forwards to the cluster and ours clears.
 - No device change. Feedback drafted for the driver; suggested next step on that branch is a factor of about 2.8.
 
+## 2026-11-23 afternoon (local time): factor 2.8 tested locally, sunnypilot's fourth tune installed
+
+Details: [docs/findings/2026-11-23-g70-factor-2.8-test-sunnypilot-fourth-tune.md](docs/findings/2026-11-23-g70-factor-2.8-test-sunnypilot-fourth-tune.md).
+
+- **Local edit on `g70-2024-new` @ `9dd31d0`:** factor 2.5 -> 2.8, to match the steering strength of the best standard-value test. **Drive `0000000e`:** wheel reversals 41 -> 22 per minute above 60 mph, but ping-pong 2.2 -> 4.9, lane movement 3.5 -> 4.5 cm, take-overs above 45 mph 3.5 -> 29 per 10 minutes. Not an improvement; reverted. Only 2.4 minutes of hands-off straight highway, on a different road from the 2.5 drive.
+- **Same road as our branch** (about 2 minutes): lane movement 4.6-4.8 cm against 1.8-2.7 cm.
+- **sunnypilot pushed `f239548`:** factor 2.5 -> 2.7, nothing else. Installed unmodified, rebooted. Not driven.
+
