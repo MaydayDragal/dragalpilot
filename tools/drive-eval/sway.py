@@ -40,12 +40,11 @@ from lib import load
 SETUPS = {
     "ours: V1 ctrl delay .20 ramp .40 (d4)": ["000000d4"],
     "ours: afternoon route (e1)": ["000000e1"],
-    "g70-2024-new 9dd31d0 (2.5 / 0.055, 270)": ["0000000d"],
+    "ours + look-ahead 0.3 (18)": ["00000018"],
+    "ours + look-ahead 0.3 (19)": ["00000019"],
     "g70-2024-new 2.7, torque tune v1": ["00000013"],
     "g70-2024-new 2.5 override, v1": ["00000014"],
     "g70-2024-new 2.5, v1, delay 0.33": ["00000015"],
-    "g70-2024-new 3.1, v1, delay 0.33": ["00000016"],
-    "g70-2024-new 2.3, v1, delay 0.33": ["00000017"],
 }
 SPEEDS = (("20-45 mph", 8.9, 20.1), ("45-60 mph", 20.1, 26.8), (">60 mph", 26.8, 99.0))
 HYST = 0.03       # m, reversals smaller than this do not end a swing

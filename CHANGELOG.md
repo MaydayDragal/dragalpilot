@@ -1335,3 +1335,13 @@ Details: [docs/findings/2026-11-25-g70-sunnypilot-settings-tests-steering-identi
 - **Withdrawn during the session:** that low-speed hunting was mostly gone on the 2.7 tune; that the car needs 38 % more torque at low speed; that factor 3.1 would reduce the sway. See section 8 of the findings.
 - **Checksums and counters checked** on what our branch sends (drive `00000006`): valid on MDPS12, LKAS11, SCC12 and FCA11; SCC11 and LKAS12 carry none; **SCC14 was going out with counter and checksum zero**. `/data/g70_long_scc14_counter` turned on 2026-11-25 about 07:40, reboot. Not driven.
 - **Delay measured against the vehicle's yaw rate** (0.1-0.6 Hz): on our branch 0.28 s at 30-45 mph, 0.33-0.34 s at 45-60, 0.33-0.39 s at 60-70, 0.45-0.46 s above 70 mph; on sunnypilot's branch 0.19-0.28 s. The planner's 0.33 s fits 45-70 mph and is about 0.1 s short above 70. `/data/g70_lat_smooth` set to `0.2 20 25 0.3` (planner delay 0.43 s from 56 mph), 2026-11-25 about 08:05. Not driven.
+
+## 2026-11-25 afternoon (local time): first drives back on our branch, the look-ahead test fails, curves in three phases
+
+Details: [docs/findings/2026-11-25-g70-first-drives-back-lookahead-curves.md](docs/findings/2026-11-25-g70-first-drives-back-lookahead-curves.md).
+
+- **Drives `00000018`, `00000019`** (our branch `1064526`, daylight). SCC14 counter and checksum valid on every frame; MDPS12 to the camera as "unavailable" with valid checksum and no counter skips; no fault, no camera warning.
+- **Look-ahead 0.3 s above 56 mph (`/data/g70_lat_smooth` `0.2 20 25 0.3`): worse.** Wobble 13.0-13.6 per minute above 60 mph against 2.0-2.7; on 9 minutes of road shared with `d4` and `e1`, lane movement 3.34-3.55 cm against 2.21-2.30 and wobble 14.5-14.9 against 1.0-1.2; ping-pong not improved. The recommendation that led to it (a longer planner delay above 70 mph) was wrong: the look-ahead beyond the filter's lag raises the planner's reaction at 0.45-1 Hz.
+- **Curves** (87 highway sweepers over all setups): turn-in toward the inside, 16-20 cm inside mid-turn, about 12 cm outside just after the exit, the same at 0.21 and 0.33 s of delay on sunnypilot's branch. Mid-turn lane movement is the same on both branches (2.7-2.9 cm); ours is only better on straights.
+- **Found, not new:** the panda's `interruptRateCan2` temporary-fault flag on every sample since at least `d4`; one blocked message per second with openpilot longitudinal.
+- **Device:** putting the file back to `0.2 20 25` is approved and **not yet done** (the comma was unreachable).
