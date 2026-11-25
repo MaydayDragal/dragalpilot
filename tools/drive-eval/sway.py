@@ -42,8 +42,7 @@ SETUPS = {
     "ours: afternoon route (e1)": ["000000e1"],
     "ours + look-ahead 0.3 (18)": ["00000018"],
     "ours + look-ahead 0.3 (19)": ["00000019"],
-    "g70-2024-new 2.7, torque tune v1": ["00000013"],
-    "g70-2024-new 2.5 override, v1": ["00000014"],
+    "ours, settings as d4/e1 + message options (1a)": ["0000001a"],
     "g70-2024-new 2.5, v1, delay 0.33": ["00000015"],
 }
 SPEEDS = (("20-45 mph", 8.9, 20.1), ("45-60 mph", 20.1, 26.8), (">60 mph", 26.8, 99.0))

@@ -1,6 +1,6 @@
 # G70 2024: first drives back on our branch, the look-ahead test, curves in three phases
 
-Covers 2026-11-25 about 08:10 to 15:40 local time (US Eastern). Drives `00000018` (13:31, 22 segments) and `00000019` (14:10, 18 segments) on our branch `g70-fingerprint` @ `1064526`, daylight. Continues [2026-11-25-g70-sunnypilot-settings-tests-steering-identification-return.md](2026-11-25-g70-sunnypilot-settings-tests-steering-identification-return.md). Device identifiers and GPS are kept out of this repo.
+Covers 2026-11-25 about 08:10 to 17:30 local time (US Eastern). Drives `00000018` (13:31, 22 segments), `00000019` (14:10, 18 segments) and `0000001a` (16:25, 25 segments, section 5a) on our branch `g70-fingerprint` @ `1064526`, daylight. Continues [2026-11-25-g70-sunnypilot-settings-tests-steering-identification-return.md](2026-11-25-g70-sunnypilot-settings-tests-steering-identification-return.md). Device identifiers and GPS are kept out of this repo.
 
 Statements are marked as observations (measured from logs), inferences, or plans.
 
@@ -77,7 +77,24 @@ A curve: the request above 0.5 m/s2 with one sign for 3 s or more, above 45 mph,
 | 2026-11-25 about 08:05 | `/data/g70_lat_smooth` `0.2 20 25` -> `0.2 20 25 0.3` (recorded in the previous findings) |
 | 2026-11-25 about 16:00 | back to `0.2 20 25` (read back through the branch's parser: filter 0.20 s, look-ahead 0.20 s); two earlier attempts found the comma unreachable |
 
+## 5a. Drive `0000001a` with the look-ahead back at 0.2 (observations)
+
+Our branch `1064526`, `/data/g70_lat_smooth` = `0.2 20 25`, both message options on. Late afternoon, heavy traffic (35 to 77 mph on the highway). No bookmarks.
+
+- **Messages:** SCC14 valid on 39,001 of 39,001 frames with the counter stepping by one; MDPS12 to the camera CRC valid on 75,420 of 75,420 with no counter skips; camera LKAS12 status 4 and 5, no warning frames; no steering or cruise fault.
+
+| Same road as `0000001a`, above 35 mph (other / `0000001a`) | Shared min | Ping-pong per min | Lane 0.2-0.7 Hz (cm) | Wheel 0.2-4 Hz (deg) | Wobble per min |
+|---|---|---|---|---|---|
+| `d4` | 10.7 | 3.1 / 4.6 | 2.19 / 2.81 | 0.182 / 0.227 | 1.6 / 3.3 |
+| `e1` | 11.4 | 2.7 / 4.3 | 2.40 / 2.97 | 0.218 / 0.254 | 1.6 / 4.5 |
+| `00000018` (look-ahead 0.3) | 9.9 | 3.5 / 4.1 | 3.57 / 2.88 | 0.287 / 0.234 | 13.6 / 4.6 |
+
+- Above 60 mph on straights (7.4 min): wobble 3.1 per minute, ping-pong 5.4, swings of 15 cm or more 1.08, 90th-percentile swing 12.1 cm, no trains, wheel reversals 34 per minute; largest loop amplification 2.18.
+- **Inference:** the wobble of the look-ahead test is gone. The drive is still behind `d4` and `e1` on shared road (lane movement about +25 %, ping-pong about +50 %). The steering settings in the log are the same as on those drives; traffic and light differ, and the morning-route drives on the same settings (`df`, `e0`) measured about the same as this one. Not attributed to a setting.
+- **Low speed:** 2.7 min of hands-off driving between 15 and 55 mph in pieces under a minute per 10 mph band, lane lines seen 45-93 % of that time. Wheel swings of 1 degree or more: 10-17 per minute (earlier drives on our branch 11-14 at 15-45 mph over 3-6 min per band). Too little for a baseline.
+
 ## 6. Open
 
+- A low-speed baseline on our branch: ten minutes at 20-45 mph, hands off, on a road with painted lines. A midday highway drive to see whether `0000001a`'s gap to `d4` / `e1` is traffic and light.
 - The panda's `interruptRateCan2` flag and the one blocked message per second: which message, and whether sunnypilot's branch shows the same.
 - The exit of curves: whether the drift to the outside is the model's line or can be reduced.

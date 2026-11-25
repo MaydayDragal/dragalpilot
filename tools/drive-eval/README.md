@@ -197,3 +197,5 @@ Reading logs on the PC: `pip install pycapnp zstandard`, then set `CEREAL_DIR` t
 - **Measure delay against the vehicle's yaw rate, by frequency and by speed.** The cross-correlation peak and the phase delay differ (0.20 s against 0.36 s on one drive); the phase delay at the sway frequencies is the one the planner's delay stands for.
 - **A measured response delay is not a planner setting.** Raising the look-ahead to match it made the steering worse; test a timing change on the road before believing the measurement that suggested it.
 - `sway.py`: the setup list now holds `00000018` and `00000019`.
+- Where lane lines are missing (slow roads), measure the wheel (swings of 1 degree or more per minute, by 10 mph band) instead of lane position; `sway.py` needs both lines.
+- `sway.py`: the setup list now holds `0000001a`.
