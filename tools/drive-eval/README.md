@@ -199,3 +199,21 @@ Reading logs on the PC: `pip install pycapnp zstandard`, then set `CEREAL_DIR` t
 - `sway.py`: the setup list now holds `00000018` and `00000019`.
 - Where lane lines are missing (slow roads), measure the wheel (swings of 1 degree or more per minute, by 10 mph band) instead of lane position; `sway.py` needs both lines.
 - `sway.py`: the setup list now holds `0000001a`.
+
+## Drive quality in one command (added 2026-11-25)
+
+`drive_quality.py` reads a drive's rlogs on the PC and prints a rated scorecard, with an HTML copy.
+
+```
+python drive_quality.py --baseline 000000d4 000000e1     # "good" means like these drives
+python drive_quality.py 0000001a                         # assess a drive (several routes may be given)
+python drive_quality.py --trend                          # one line per drive assessed so far
+```
+
+- Set `CEREAL_DIR` / `CAR_CAPNP_DIR` as for `pclog.py`; `DRAGAL_DATA` points at the data root (default `~/Documents/DragalPilot`). Rlogs are found under `recordings/` by route name, read in parallel and cached; about 13 s per drive the first time.
+- Output goes to `<data>/analysis/quality/`: `<route>.html`, `<route>.json`, `history.jsonl`, `baseline.json`. Nothing is written to the repo and no position data is read.
+- **Sections:** steering on straights per speed band (lane movement, slow and large swings, wheel movement, torque flips, the controller's tracking error); low speed without lane lines (wheel only); curves (position toward the inside on entry, mid-turn and after the exit); take-overs; speed control (hard braking, strongest braking, command flips, time gap, closest stop); messages and faults (SCC14, MDPS12, camera warnings re-sent, panda, car faults).
+- **Ratings:** good = within 25 % of the baseline or better, fair = within 75 %, poor beyond, with a small floor so noise near zero is not rated. Bands with under 1.5 minutes are shown unrated. Braking, the closest following gap, stop distance and message checks use fixed limits.
+- **Checked against the other tools:** on `e1` above 60 mph it gives 2.41 cm of lane movement (`sway.py` 2.3 cm in its 0.2-0.7 Hz band) and on the look-ahead drive `00000018` 1.25 large swings per minute (`sway.py` 1.25). It flags `00000018` (3 poor) against `0000001a` (1 poor) and the baseline drives.
+- It does not replace `sway.py` (loop analysis, same-road comparison) or `curve_phases.py` (per-curve detail); it is the first look at a new drive.
+- The baseline is whatever drives were last given to `--baseline`; ratings from different baselines are not comparable.
