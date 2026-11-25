@@ -7,6 +7,7 @@ from opendbc.car.disable_ecu import disable_ecu
 from opendbc.car.hyundai.carcontroller import CarController
 from opendbc.car.hyundai.carstate import CarState
 from opendbc.car.hyundai.radar_interface import RadarInterface
+from opendbc.car.hyundai import g70_torque_curve
 
 from opendbc.sunnypilot.car.hyundai.escc import ESCC_MSG
 from opendbc.sunnypilot.car.hyundai.longitudinal.helpers import get_longitudinal_tune
@@ -25,6 +26,21 @@ class CarInterface(CarInterfaceBase):
   RadarInterface = RadarInterface
 
   DRIVABLE_GEARS = (structs.CarState.GearShifter.sport, structs.CarState.GearShifter.manumatic)
+
+  # G70 2024: optional non-linear torque curve, on only while /data/g70_lat_torque_curve exists (see g70_torque_curve.py)
+  def _g70_torque_curve(self):
+    if self.CP.carFingerprint != CAR.GENESIS_G70_2024:
+      return None
+    curve = g70_torque_curve.read_curve()
+    return g70_torque_curve.TorqueCurve(*curve) if curve is not None else None
+
+  def torque_from_lateral_accel(self):
+    curve = self._g70_torque_curve()
+    return curve.torque_from_lateral_accel if curve is not None else self.torque_from_lateral_accel_linear
+
+  def lateral_accel_from_torque(self):
+    curve = self._g70_torque_curve()
+    return curve.lateral_accel_from_torque if curve is not None else self.lateral_accel_from_torque_linear
 
   @staticmethod
   def _get_params(ret: structs.CarParams, candidate, fingerprint, car_fw, alpha_long, is_release, docs) -> structs.CarParams:

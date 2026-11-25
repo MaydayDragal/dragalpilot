@@ -146,6 +146,25 @@ def arc_bar_pts(r_mid: float, thickness: float,
 
 DEFAULT_MAX_LAT_ACCEL = 3.0  # m/s^2
 
+# G70: optional steering-wheel movement bar in place of the torque bar. /data/g70_ui_steer_bar holds "span [seconds]":
+# the bar is full at +-span degrees (default 2) around the wheel's own average over the last few seconds (default 8),
+# so on a straight it shows how much the wheel is moving and in a steady curve it settles back to the middle.
+STEER_BAR_FILE = "/data/g70_ui_steer_bar"
+
+
+def read_steer_bar(path: str = STEER_BAR_FILE):
+  try:
+    with open(path) as f:
+      v = f.read().split()
+  except OSError:
+    return None
+  try:
+    span = float(v[0]) if len(v) > 0 else 2.0
+    tau = float(v[1]) if len(v) > 1 else 8.0
+  except ValueError:
+    span, tau = 2.0, 8.0
+  return min(max(span, 0.5), 30.0), min(max(tau, 1.0), 60.0)
+
 
 class TorqueBar(Widget):
   def __init__(self, demo: bool = False, scale: float = 1.0, always: bool = False):
@@ -155,6 +174,8 @@ class TorqueBar(Widget):
     self._always = always
     self._torque_filter = FirstOrderFilter(0, 0.1, 1 / gui_app.target_fps)
     self._torque_line_alpha_filter = FirstOrderFilter(0.0, 0.1, 1 / gui_app.target_fps)
+    self._steer_bar = read_steer_bar()
+    self._steer_mean = None
 
   def update_filter(self, value: float):
     """Update the torque filter value (for demo mode)."""
@@ -162,6 +183,16 @@ class TorqueBar(Widget):
 
   def _update_state(self):
     if self._demo:
+      return
+
+    if self._steer_bar is not None:
+      span, tau = self._steer_bar
+      angle = ui_state.sm['carState'].steeringAngleDeg
+      if self._steer_mean is None:
+        self._steer_mean = FirstOrderFilter(angle, tau, 1 / gui_app.target_fps)
+      mean = self._steer_mean.update(angle)
+      # wheel to the left (positive angle) moves the bar to the left
+      self._torque_filter.update(float(np.clip(-(angle - mean) / span, -1, 1)))
       return
 
     # torque line
@@ -190,9 +221,10 @@ class TorqueBar(Widget):
       self._torque_filter.update(-ui_state.sm['carOutput'].actuatorsOutput.torque)
 
   def _render(self, rect: rl.Rectangle) -> None:
-    # adjust y pos with torque
-    torque_line_offset = np.interp(abs(self._torque_filter.x), [0.5, 1], [22 * self._scale, 26 * self._scale])
-    torque_line_height = np.interp(abs(self._torque_filter.x), [0.5, 1], [14 * self._scale, 56 * self._scale])
+    # adjust y pos with torque (the steering-wheel bar stays thin and white: a full bar there is not a limit)
+    load = 0.0 if self._steer_bar is not None else abs(self._torque_filter.x)
+    torque_line_offset = np.interp(load, [0.5, 1], [22 * self._scale, 26 * self._scale])
+    torque_line_height = np.interp(load, [0.5, 1], [14 * self._scale, 56 * self._scale])
 
     # animate alpha and angle span
     if not self._demo:
@@ -200,7 +232,7 @@ class TorqueBar(Widget):
     else:
       self._torque_line_alpha_filter.update(1.0)
 
-    torque_line_bg_alpha = np.interp(abs(self._torque_filter.x), [0.5, 1.0], [0.25, 0.5])
+    torque_line_bg_alpha = np.interp(load, [0.5, 1.0], [0.25, 0.5])
     torque_line_bg_color = rl.Color(255, 255, 255, int(255 * torque_line_bg_alpha * self._torque_line_alpha_filter.x))
     if ui_state.status not in (UIStatus.ENGAGED, UIStatus.LAT_ONLY) and not self._demo:
       torque_line_bg_color = rl.Color(255, 255, 255, int(255 * 0.15 * self._torque_line_alpha_filter.x))
@@ -238,12 +270,12 @@ class TorqueBar(Widget):
     start_color = blend_colors(
       rl.Color(255, 255, 255, int(255 * 0.9 * self._torque_line_alpha_filter.x)),
       rl.Color(255, 200, 0, int(255 * self._torque_line_alpha_filter.x)),  # yellow
-      max(0, abs(self._torque_filter.x) - 0.75) * 4,
+      max(0, load - 0.75) * 4,
     )
     end_color = blend_colors(
       rl.Color(255, 255, 255, int(255 * 0.9 * self._torque_line_alpha_filter.x)),
       rl.Color(255, 115, 0, int(255 * self._torque_line_alpha_filter.x)),  # orange
-      max(0, abs(self._torque_filter.x) - 0.75) * 4,
+      max(0, load - 0.75) * 4,
     )
 
     if ui_state.status not in (UIStatus.ENGAGED, UIStatus.LAT_ONLY) and not self._demo:
@@ -262,7 +294,7 @@ class TorqueBar(Widget):
     draw_polygon(rect, sl_pts, gradient=gradient)
 
     # draw center torque bar dot
-    if abs(self._torque_filter.x) < 0.5:
+    if load < 0.5:
       dot_y = self._rect.y + self._rect.height - torque_line_offset - torque_line_height / 2
       rl.draw_circle(int(cx), int(dot_y), (10 // 2 * self._scale),
                      rl.Color(182, 182, 182, int(255 * 0.9 * self._torque_line_alpha_filter.x)))
