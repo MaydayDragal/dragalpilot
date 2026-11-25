@@ -1320,3 +1320,16 @@ Details: [docs/findings/2026-11-23-g70-sunnypilot-fourth-tune-drive-daw.md](docs
 - **Correction:** the reading that the camera's attention state stayed at its lowest level on that branch (2026-11-21, repeated on 2026-11-22 and 2026-11-23) used the wrong LKAS12 field and is withdrawn; the MDPS12 spoof does not stop the take-a-break warning. The three documents are marked.
 - No device change.
 
+## 2026-11-24 to 2026-11-25 morning (local time): settings-only tuning on sunnypilot's branch, the steering identified, back to our branch
+
+Details: [docs/findings/2026-11-25-g70-sunnypilot-settings-tests-steering-identification-return.md](docs/findings/2026-11-25-g70-sunnypilot-settings-tests-steering-identification-return.md).
+
+- **Eight drives on `g70-2024-new` @ `f239548`** (`00000010` to `00000017`), the branch itself unmodified except for one drive with a local screen edit. Changed through its own settings: torque learner off (it had reached 100 % and was moving 2.7 / 0.055 toward about 3.1 / 0.09), controller v1, factor by override (2.5, 3.1, 2.3), a fixed 0.33 s delay.
+- **Best settings-only setup there:** v1, 2.5 / 0.055, delay 0.33 s. v1 cut the fast wobble to about a third; the delay made the swings smaller; factors 2.3, 2.7 and 3.1 all swayed more. Still behind ours on the same road (ping-pong 4.2-4.3 per minute against 3.1-3.4, lane movement 3.2 cm against 2.2-2.45).
+- **Steering identified from logs:** delay 0.18-0.28 s; friction 5-7 counts on highway straights; stiffness 44-52 counts per m/s2 on straights against 75-88 in turns; torque need flat with speed from 35 mph up. On straights the torque varies by about 9 counts, so the car steers inside its friction band much of the time.
+- **Our controller follows its request about six times more closely** than that branch's best setup on the highway (0.011-0.012 m/s2 rms against 0.068-0.073).
+- **Not achieved:** a tune that is stable by calculation; the loop model built from the identified steering does not reproduce the measured response.
+- **Built on our branch, off by default, not installed (`74ef2dc`, pushed):** a G70-only torque curve (`/data/g70_lat_torque_curve`) and a steering-wheel movement bar (`/data/g70_ui_steer_bar`).
+- **Take-a-break warning** again on that branch (`00000017`, bookmarked), forwarded to the cluster; ours blocks it.
+- **Device, 2026-11-25 about 07:17:** back on our branch `1064526` with factor 4.5 and the other settings as last run; `/data/g70_cam_mdps12` on for the first time. Not driven.
+- **Withdrawn during the session:** that low-speed hunting was mostly gone on the 2.7 tune; that the car needs 38 % more torque at low speed; that factor 3.1 would reduce the sway. See section 8 of the findings.

@@ -176,3 +176,16 @@ Reading logs on the PC: `pip install pycapnp zstandard`, then set `CEREAL_DIR` t
 - **Before trying a borrowed steering model, sample its reaction to fast changes** (the lateral jerk input), not only its steady output.
 - `sway.py`: the setup list now holds the standard-value tests on sunnypilot's branch.
 
+## Added 2026-11-25
+
+| Script | Runs on | What it does |
+|---|---|---|
+| `extract_pc.py <tools dir> <out dir> <rlog glob> ...` | PC | runs the per-segment extraction of `extract.py` with `pclog.py` in place of the device's log reader (set `CEREAL_DIR` / `CAR_CAPNP_DIR` for the branch that made the log; use Windows-style paths). No device needed. |
+| `render_steer_bar.py <sunnypilot checkout> <out.png>` | PC | draws the bottom bar of the driving screen in steering-wheel mode by running the real `torque_bar.py` with a stand-in drawing library |
+| `loopmodel.py` | PC | small-signal model of the steering loop from the identified steering (stiffness, damping, delay) and the v1 control law. **It does not reproduce the measured response** (gain 1.2-1.4 and 30-50 degrees of lag predicted at 0.2-0.45 Hz, 0.84-0.90 and 81-92 measured); kept as a record, not for choosing settings. |
+
+- **Check `IsOffroad` before pulling logs.** A pull while the car is on adds load to a comma that is running the car.
+- **Bin by 10 mph before claiming a speed effect.** Wide bands (15-30 mph against the highway) made the torque need look speed-dependent; it is flat from 35 mph up.
+- **A controller's own error (`torqueState.error`) is the direct measure of how well steering follows its request**; compare it across setups before blaming the controller for lane movement.
+- **Steady-state torque data cannot tell a soft centre from stiction.** A wheel held by friction shows the same flat zone.
+- `sway.py`: the setup list now holds the settings tests on sunnypilot's branch (`00000013` to `00000017`).
