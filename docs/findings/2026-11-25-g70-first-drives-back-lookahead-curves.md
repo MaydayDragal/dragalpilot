@@ -10,7 +10,7 @@ Statements are marked as observations (measured from logs), inferences, or plans
 - **Observation:** the look-ahead raised to 0.3 s above 56 mph made the steering worse: fast wobble 13.0-13.6 per minute above 60 mph against 2.0-2.7, lane movement on the same road 3.34-3.55 cm against 2.21-2.30, and no gain in slow sway.
 - **Inference:** looking further ahead than the smoothing filter lags is a lead: it raises the planner's reaction at 0.45-1 Hz. The measured request-to-vehicle delay (0.40-0.45 s) is how the car responds, not something to cancel with look-ahead. The recommendation of section 9b of the previous findings was wrong.
 - **Observation:** every highway curve has the same shape on every setup: the car turns in toward the inside, holds 16-20 cm inside, and sits about 12 cm to the outside just after the exit. The delay setting on sunnypilot's branch (0.21 against 0.33 s) did not change it.
-- **Device:** the look-ahead is still `0.2 20 25 0.3`; putting back `0.2 20 25` is approved and not yet done (the comma was unreachable).
+- **Device:** `/data/g70_lat_smooth` is back at `0.2 20 25` (2026-11-25 about 16:00), the value of `d4` and `e1`.
 
 ## 2. Message options (observations, `msg_check.py`, cruise-engaged segments)
 
@@ -75,10 +75,9 @@ A curve: the request above 0.5 m/s2 with one sign for 3 s or more, above 45 mph,
 | When | Change |
 |---|---|
 | 2026-11-25 about 08:05 | `/data/g70_lat_smooth` `0.2 20 25` -> `0.2 20 25 0.3` (recorded in the previous findings) |
-| not yet done | back to `0.2 20 25` (approved about 15:30; the comma was not reachable) |
+| 2026-11-25 about 16:00 | back to `0.2 20 25` (read back through the branch's parser: filter 0.20 s, look-ahead 0.20 s); two earlier attempts found the comma unreachable |
 
 ## 6. Open
 
-- Put `/data/g70_lat_smooth` back to `0.2 20 25`.
 - The panda's `interruptRateCan2` flag and the one blocked message per second: which message, and whether sunnypilot's branch shows the same.
 - The exit of curves: whether the drift to the outside is the model's line or can be reduced.
