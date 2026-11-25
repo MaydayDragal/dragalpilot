@@ -156,14 +156,31 @@ Statements are marked as observations (measured from logs or code), inferences, 
 | about 19:40 | factor override 3.1 |
 | about 20:05 | factor override 2.3 |
 | 2026-11-25 about 07:17 | `/data/openpilot` moved to `/data/openpilot_g70new`, `/data/openpilot_ours` to `/data/openpilot`; `TorqueControlTune` 1.0, `CustomTorqueParams`, `EnforceTorqueControl`, `LateralJerkTorqueController`, `TorqueBar`, `TorqueParamsOverrideEnabled` on with 4.5 / 0.07, `LagdToggle` 1, `LagdToggleDelay` 0.2; `/data/g70_cam_mdps12` created; reboot |
+| 2026-11-25 about 07:40 | `/data/g70_long_scc14_counter` created, reboot |
 
-Current: **our branch `g70-fingerprint` @ `1064526`**, no local edits; the panda reports no faults after the reboot (its firmware signature was not read). Option files as before the excursion plus `/data/g70_cam_mdps12`; `/data/g70_long_scc14_counter` absent. sunnypilot's install is kept at `/data/openpilot_g70new` (@ `f239548`, unmodified).
+Current: **our branch `g70-fingerprint` @ `1064526`**, no local edits; the panda reports no faults after the reboot (its firmware signature was not read). Option files as before the excursion plus `/data/g70_cam_mdps12` and `/data/g70_long_scc14_counter`, both on for the first time on our branch. sunnypilot's install is kept at `/data/openpilot_g70new` (@ `f239548`, unmodified).
 
 - A log pull was held while the comma was still onroad (load average 9 against about 1.5 parked) and done after the ignition was off.
 
+## 9a. Checksums and counters of what our branch sends (observations, drive `00000006`, four segments)
+
+| Message | Checksum | Counter |
+|---|---|---|
+| MDPS12 to the camera | CRC8 valid on 23,511 of 23,511 (the steering unit's own: 23,999 of 23,999) | one step per frame since `1064526` |
+| LKAS11 | CRC8 valid on 24,000 of 24,000 | |
+| SCC12 | nibble checksum valid on 12,000 of 12,000 | |
+| FCA11 | CRC8 valid on 11,994 of 11,994 | |
+| SCC11 | none in the message (no byte matches a CRC8 or a sum of the rest) | steps by one on every frame |
+| LKAS12 re-sent | none in the message; no counter; every payload sent is one the camera also sends | |
+| SCC14 | **zero; valid on 90 of 12,000** | **zero** |
+
+- The camera's own SCC14 has a counter running 0 to 14 and a nibble checksum valid on all 11,994 frames. Our branch sent both as zero because `/data/g70_long_scc14_counter` was off; no fault was seen from it on any drive.
+- The option (sunnypilot's formula, ported on 2026-11-21) was turned on 2026-11-25 about 07:40. Not driven.
+- A first pass of this check reported every CRC as invalid, the car's own frames included: the test's CRC started from the wrong register value (the routine starts from init XOR xor-out). Check a checksum test against the car's own frames before reading it.
+
 ## 10. Open
 
-- First drive back on our branch: the highway in daylight on the usual route, and whether `/data/g70_cam_mdps12` changes anything on the cluster.
+- First drive back on our branch: the highway in daylight on the usual route, whether `/data/g70_cam_mdps12` changes anything on the cluster, and SCC14 with its counter and checksum (any cruise fault).
 - 20–45 mph on any setup; a measurement of the centre that separates stiffness from stiction.
 - For sunnypilot: the learner pulling tunes back toward the measured values, the torque limit reached on an on-ramp, the take-a-break and lead-departure messages reaching the cluster.
 - Still not driven on our branch: the 0.85 s gap on one bar, the continuous relay counter (it runs from this drive on).

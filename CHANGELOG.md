@@ -1333,3 +1333,4 @@ Details: [docs/findings/2026-11-25-g70-sunnypilot-settings-tests-steering-identi
 - **Take-a-break warning** again on that branch (`00000017`, bookmarked), forwarded to the cluster; ours blocks it.
 - **Device, 2026-11-25 about 07:17:** back on our branch `1064526` with factor 4.5 and the other settings as last run; `/data/g70_cam_mdps12` on for the first time. Not driven.
 - **Withdrawn during the session:** that low-speed hunting was mostly gone on the 2.7 tune; that the car needs 38 % more torque at low speed; that factor 3.1 would reduce the sway. See section 8 of the findings.
+- **Checksums and counters checked** on what our branch sends (drive `00000006`): valid on MDPS12, LKAS11, SCC12 and FCA11; SCC11 and LKAS12 carry none; **SCC14 was going out with counter and checksum zero**. `/data/g70_long_scc14_counter` turned on 2026-11-25 about 07:40, reboot. Not driven.
