@@ -158,7 +158,7 @@ Statements are marked as observations (measured from logs or code), inferences, 
 | 2026-11-25 about 07:17 | `/data/openpilot` moved to `/data/openpilot_g70new`, `/data/openpilot_ours` to `/data/openpilot`; `TorqueControlTune` 1.0, `CustomTorqueParams`, `EnforceTorqueControl`, `LateralJerkTorqueController`, `TorqueBar`, `TorqueParamsOverrideEnabled` on with 4.5 / 0.07, `LagdToggle` 1, `LagdToggleDelay` 0.2; `/data/g70_cam_mdps12` created; reboot |
 | 2026-11-25 about 07:40 | `/data/g70_long_scc14_counter` created, reboot |
 
-Current: **our branch `g70-fingerprint` @ `1064526`**, no local edits; the panda reports no faults after the reboot (its firmware signature was not read). Option files as before the excursion plus `/data/g70_cam_mdps12` and `/data/g70_long_scc14_counter`, both on for the first time on our branch. sunnypilot's install is kept at `/data/openpilot_g70new` (@ `f239548`, unmodified).
+Current: **our branch `g70-fingerprint` @ `1064526`**, no local edits; the panda reports no faults after the reboot (its firmware signature was not read). Option files as before the excursion plus `/data/g70_cam_mdps12` and `/data/g70_long_scc14_counter`, both on for the first time on our branch, and `/data/g70_lat_smooth` = `0.2 20 25 0.3` (section 9b). sunnypilot's install is kept at `/data/openpilot_g70new` (@ `f239548`, unmodified).
 
 - A log pull was held while the comma was still onroad (load average 9 against about 1.5 parked) and done after the ignition was off.
 
@@ -177,6 +177,26 @@ Current: **our branch `g70-fingerprint` @ `1064526`**, no local edits; the panda
 - The camera's own SCC14 has a counter running 0 to 14 and a nibble checksum valid on all 11,994 frames. Our branch sent both as zero because `/data/g70_long_scc14_counter` was off; no fault was seen from it on any drive.
 - The option (sunnypilot's formula, ported on 2026-11-21) was turned on 2026-11-25 about 07:40. Not driven.
 - A first pass of this check reported every CRC as invalid, the car's own frames included: the test's CRC started from the wrong register value (the routine starts from init XOR xor-out). Check a checksum test against the car's own frames before reading it.
+
+## 9b. The delay the car needs (observations, 2026-11-25 morning)
+
+Measured as the phase delay from the request (`controlsState.desiredCurvature` x v^2) to the vehicle's yaw rate x v, 0.1-0.6 Hz, hands off (`delay_extract.py`, `delay_measure.py`). The yaw rate is the raw gyroscope combined to match the calibrated yaw of the drives that log it (main axis 2 degrees from vertical).
+
+| Speed | Ours `e1` / `d4` | sunnypilot's branch (`00000012`, `00000014`, `00000015`) |
+|---|---|---|
+| 30-45 mph | - / 0.28 s | |
+| 45-60 mph | 0.34 / 0.33 s | |
+| 60-70 mph | 0.33 / 0.39 s | 0.19 s (one drive) |
+| above 70 mph | 0.45 / 0.46 s | 0.22, 0.28, 0.28 s |
+
+- The delay rises with speed on both branches and is shorter at 0.6-1.2 Hz (0.22-0.28 s on ours, 0.13-0.19 s on that branch): a lag more than dead time.
+- It did not change with the published delay on that branch (0.28 s at 0.21 and at 0.33 published).
+- lagd's own estimate: 0.227-0.268 s on ours, 0.204-0.212 s on that branch.
+- **Against our settings:** the planner's delay is the published 0.33 s plus 0.025 s; the smoothing's look-ahead only cancels the filter's own lag. That matches the measurement at 45-70 mph and is about 0.1 s short above 70 mph.
+- The steering-angle-based curvature trails the request by 0.44-0.64 s and trails the yaw rate by 0.1-0.25 s. Cause not known; the gyroscope's tilt was checked and is not it.
+- **Curves** (position toward the inside while the request builds / is steady / unwinds): ours +14 / +15 to +18 / +8 to +11 cm; that branch +18 to +31 / +16 to +30 / +14 to +23 cm. Every setup sits inside; the differences between delay settings are within the spread and on different roads.
+- **Withdrawn while measuring:** that the 0.1 degree steps of the angle sensor explain the lag (the logged angle moves in finer steps).
+- **Device, 2026-11-25 about 08:05:** `/data/g70_lat_smooth` `0.2 20 25` -> `0.2 20 25 0.3` (look-ahead 0.3 s with the 0.2 s filter: planner delay 0.33 s up to 45 mph, 0.43 s from 56 mph). The previous file is kept beside it. Not driven.
 
 ## 10. Open
 

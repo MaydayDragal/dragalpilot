@@ -189,3 +189,7 @@ Reading logs on the PC: `pip install pycapnp zstandard`, then set `CEREAL_DIR` t
 - **A controller's own error (`torqueState.error`) is the direct measure of how well steering follows its request**; compare it across setups before blaming the controller for lane movement.
 - **Steady-state torque data cannot tell a soft centre from stiction.** A wheel held by friction shows the same flat zone.
 - `sway.py`: the setup list now holds the settings tests on sunnypilot's branch (`00000013` to `00000017`).
+| `delay_extract.py <out.npz> <rlog glob>` | PC | per route at 100 Hz: request, measured curvature, torque, raw gyroscope, calibrated yaw rate where logged, lane lines, lagd's delay |
+| `delay_measure.py <label>=<file.npz> ...` | PC | the delay chain (model request, request, torque, wheel, vehicle) by cross-correlation and by cross-spectrum phase in three frequency bands, and the car's position toward the inside of curves while the request builds, holds and unwinds |
+
+- **Measure delay against the vehicle's yaw rate, by frequency and by speed.** The cross-correlation peak and the phase delay differ (0.20 s against 0.36 s on one drive); the phase delay at the sway frequencies is the one the planner's delay stands for.
