@@ -106,7 +106,7 @@ def read_segment(path):
                     d = bytes(c.dat); warn = ((d[5] >> 4) & 1) or (d[5] & 7) == 6
                     if s == 2: H["cam_lkas12"] += 1; H["cam_warn"] += warn
                     elif s == 128: H["tx_lkas12"] += 1; H["tx_warn"] += warn
-    return {k: np.array(v, dtype=float).reshape(len(v), -1) for k, v in S.items()}, ev, bm, sorted(alerts), dict(H), info
+    return {k: (np.array(v, dtype=float).reshape(len(v), -1) if v else np.zeros((0, 2))) for k, v in S.items()}, ev, bm, sorted(alerts), dict(H), info
 
 def find_rlogs(route):
     paths = glob.glob(os.path.join(DATA, "recordings", "**", route + "--*", "rlog.zst"), recursive=True)
@@ -121,7 +121,9 @@ def load(route):
     if not paths: raise SystemExit(f"no rlogs found for {route} under {os.path.join(DATA, 'recordings')}")
     from multiprocessing import Pool
     with Pool(min(6, len(paths))) as p: R = p.map(read_segment, paths)
-    S = {k: np.concatenate([r[0][k] for r in R if len(r[0][k])]) for k in R[0][0]}
+    S = {}
+    for k in R[0][0]:
+        parts = [r[0][k] for r in R if len(r[0][k])]; S[k] = np.concatenate(parts) if parts else np.zeros((0, 2))   # a stream a branch does not log
     H = {}
     for r in R:
         for k, v in r[4].items(): H[k] = max(H.get(k, 0), v) if k == "rxInvalid" else H.get(k, 0) + int(v)
