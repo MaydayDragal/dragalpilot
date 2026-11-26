@@ -34,7 +34,7 @@ from openpilot.common.filter_simple import FirstOrderFilter
 from openpilot.common.realtime import config_realtime_process, DT_MDL
 from openpilot.common.transformations.camera import DEVICE_CAMERAS
 from openpilot.system.camerad.cameras.nv12_info import get_nv12_info
-from openpilot.common.transformations.model import get_warp_matrix
+from openpilot.common.transformations.model import get_warp_matrix, medmodel_intrinsics, sbigmodel_intrinsics
 from openpilot.selfdrive.controls.lib.desire_helper import DesireHelper
 from openpilot.selfdrive.controls.lib.drive_helpers import get_accel_from_plan, should_stop, smooth_value, get_curvature_from_plan
 from openpilot.selfdrive.modeld.parse_model_outputs import Parser
@@ -43,7 +43,7 @@ from openpilot.selfdrive.modeld.constants import ModelConstants, Plan
 from openpilot.selfdrive.modeld.helpers import MODELS_DIR, chestnut_present, chestnut_compiled, modeld_pkl_path, load_oob, wait_for_chestnut
 from openpilot.sunnypilot.livedelay.helpers import get_lat_delay, lat_smooth_at, read_lat_smooth_lookahead, read_lat_smooth_seconds, \
                                                    lat_lookahead_low_at, read_lat_lookahead_low, \
-                                                   read_lat_smooth_speeds
+                                                   read_lat_smooth_speeds, read_view_shift, view_shift_warp
 from openpilot.sunnypilot.modeld_v2.modeld_base import ModelStateBase
 from openpilot.sunnypilot.selfdrive.controls.lib.relc import RoadEdgeLaneChangeController
 
@@ -54,6 +54,7 @@ LAT_SMOOTH_V_LO, LAT_SMOOTH_V_HI = read_lat_smooth_speeds()  # dragalpilot: opti
 
 
 LAT_LOOKAHEAD_LOW = read_lat_lookahead_low()  # dragalpilot: none unless /data/g70_lat_lookahead_low exists
+VIEW_SHIFT = read_view_shift()  # dragalpilot: none unless /data/g70_view_shift exists (metres, + = car further right)
 LAT_SMOOTH_LOOKAHEAD = read_lat_smooth_lookahead(LAT_SMOOTH_SECONDS)  # dragalpilot: optional, defaults to the filter time
 
 
@@ -407,6 +408,10 @@ def main(demo=False):
       has_wide_camera = use_extra_client or main_wide_camera
       extra_intrinsics = dc.wide_road.intrinsics if has_wide_camera else dc.narrow_road.intrinsics
       model_transform_extra = get_warp_matrix(device_from_calib_euler, extra_intrinsics, True).astype(np.float32)
+      if VIEW_SHIFT != 0.0:
+        cam_height = float(sm["extrinsicsCalibration"].height[0]) if len(sm["extrinsicsCalibration"].height) else 0.0
+        model_transform_main = view_shift_warp(model_transform_main, medmodel_intrinsics, cam_height, VIEW_SHIFT)
+        model_transform_extra = view_shift_warp(model_transform_extra, sbigmodel_intrinsics, cam_height, VIEW_SHIFT)
       extrinsics_calibration_seen = True
 
     traffic_convention = np.zeros(2)

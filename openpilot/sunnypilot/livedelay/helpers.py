@@ -222,3 +222,38 @@ def lat_lookahead_low_at(v_ego: float, schedule: tuple[float, float, float]) -> 
   if v_hi <= v_lo:
     return 0.0
   return seconds * (1.0 - min(max((v_ego - v_lo) / (v_hi - v_lo), 0.0), 1.0))
+
+
+# dragalpilot (G70 2024): optional view shift for the driving model, read from a one-line text file holding metres,
+# + = the car should sit further RIGHT in its lane. On the highway the model holds the car about 15 cm left of the
+# lane centre (all drives, both branches); the model itself does this, not the steering. An offline replay of this
+# build's model (driving_supercombo.onnx at 066c0e2, on recorded video of route 0000001a) shows that shifting the
+# view so the model sees itself S metres further left makes it plan and steer right, close to one for one. The
+# shift is applied to both camera warps before the model sees the frame, as the DogPilot fork does (a lateral
+# translation of the viewpoint over the road plane at the calibrated camera height). sunnypilot's own CameraOffset
+# reaches only the Model Manager runner (modeld_v2), not this one. No file, or an unreadable one, means none.
+VIEW_SHIFT_FILE = "/data/g70_view_shift"
+VIEW_SHIFT_MAX = 0.30
+
+
+def read_view_shift(path: str = VIEW_SHIFT_FILE) -> float:
+  try:
+    with open(path) as f:
+      value = float(f.read().split()[0])
+  except (OSError, ValueError, IndexError):
+    return 0.0
+  if value != value:
+    return 0.0
+  return min(max(value, -VIEW_SHIFT_MAX), VIEW_SHIFT_MAX)
+
+
+def view_shift_warp(warp, model_intrinsics, height: float, move_right: float):
+  """warp (model frame -> camera frame) as seen from a camera moved sideways; move_right > 0 makes the model see the
+  car further left, so it steers the car right. height: the camera's height above the road (m)."""
+  import numpy as np
+  if move_right == 0.0 or not height > 0.0:
+    return warp
+  fx, fy, cy = model_intrinsics[0, 0], model_intrinsics[1, 1], model_intrinsics[1, 2]
+  k = -fx * move_right / (fy * height)
+  shear = np.array([[1.0, k, -k * cy], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], dtype=np.float32)
+  return (warp @ shear).astype(np.float32)
