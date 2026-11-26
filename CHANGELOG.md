@@ -1347,3 +1347,12 @@ Details: [docs/findings/2026-11-25-g70-first-drives-back-lookahead-curves.md](do
 - **Device:** `/data/g70_lat_smooth` back to `0.2 20 25` about 16:00.
 - **Drive `0000001a`** (look-ahead back at 0.2, late afternoon, heavy traffic): messages valid on every frame again, no fault. Wobble 3.1 per minute above 60 mph (13 with the look-ahead). On 11 minutes shared with `d4` / `e1`: lane movement 2.81-2.97 cm against 2.19-2.40, ping-pong 4.3-4.6 against 2.7-3.1; same settings, not attributed to one. Only 2.7 minutes of hands-off low-speed driving: no baseline yet. Section 5a of [docs/findings/2026-11-25-g70-first-drives-back-lookahead-curves.md](docs/findings/2026-11-25-g70-first-drives-back-lookahead-curves.md).
 - **`tools/drive-eval/drive_quality.py`:** one command that reads a drive's rlogs on the PC and prints a rated scorecard (steering by speed band, low speed, curves, take-overs, speed control, messages and faults) against baseline drives, with an HTML copy and a trend table. Baseline set from `d4` and `e1`.
+
+## 2026-11-26 (local time): the left lean, an offline model replay, and a view-shift option
+
+Details: [docs/findings/2026-11-26-g70-left-lean-model-replay-view-shift.md](docs/findings/2026-11-26-g70-left-lean-model-replay-view-shift.md).
+
+- **The car sits left of the lane centre on the highway on every drive** (ours 14-29 cm, sunnypilot's 1-23 cm), pointed out by a comparison from another project.
+- **Offline replay of this build's driving model** (`driving_supercombo.onnx` at `066c0e2`) on recorded video of `0000001a`: lane lines within 1.3 cm of the log, the same 15 cm left position, desiredCurvature at r 0.9998. The model plans to stay there; the lean is its own line.
+- **A view shift moves it:** the model, shown the car 10 cm further left, plans about 6 cm right within 3 s and asks for 0.048 m/s2 more to the right; symmetric and close to linear.
+- **`8c1c374` (pushed):** `/data/g70_view_shift` (metres, + = car further right). **Installed with 0.10**, reboot; modeld imports with the value. Not driven.
