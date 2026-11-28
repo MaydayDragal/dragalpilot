@@ -55,8 +55,29 @@ Against the unshifted replay, same frames. "Seen" = where the model sees the lan
 |---|---|
 | 2026-11-26 about 18:28 | our branch fast-forwarded `1064526` -> `8c1c374` (adds the torque curve, the steering-wheel bar and the view shift, the first two off without their files); rollback branch `g70-fingerprint-prev` = `1064526`; `/data/g70_view_shift` = `0.10`; reboot |
 
+## 6a. First drives with the shift (observations, added 2026-11-27)
+
+Drives `0000001e` to `00000023` (2026-11-26 evening to 2026-11-27), all on `8c1c374` with `/data/g70_view_shift` = 0.10; 77 logs, sha256 verified. Road and wide video pulled for `00000022` segments 2-3 and `00000023` segments 16-18 (10 files, verified).
+
+The logged lane lines come from the shifted view, so the true position was measured with the replay run with and without the shift:
+
+| Highway straights | `00000022` (1.9 min, 76 mph) | `00000023` (2.9 min, 70 mph) |
+|---|---|---|
+| Replay with the 10 cm shift against the log | +0.3 cm, rms 0.8 cm, corr 0.999 | +0.1 cm, rms 0.7 cm, corr 0.995 |
+| Replay without the shift against the log | -9.4 cm | -9.2 cm |
+| **True position** (replay without the shift) | **10.3 cm left of centre** | **10.1 cm left** |
+| Time more than 30 cm off centre | 2 % left, 2 % right | 0 % |
+
+- The shift was in force, and the car moved about 9 cm right (typical before: 15-29 cm left, about 19). The model still holds its own preferred spot in what it sees (logged 19.1-19.6 cm).
+- `drive_quality.py` above 60 mph: `00000022` lane movement 2.53 cm, slow swings 2.6 per minute, wheel 0.152 degrees; `00000023` 3.04, 4.7, 0.181 (`d4` / `e1` 2.41, 3.1, 0.12).
+- **Inference:** about 0.19 would centre the car; 0.15 about 5 cm left.
+
+| When | Change |
+|---|---|
+| 2026-11-27 about 18:30 | `TorqueParamsOverrideLatAccelFactor` 4.5 -> 4.2 (the planned curve test; view shift kept at 0.10) |
+
 ## 7. Open
 
-- First drive with the shift: highway position on the same road as `d4` / `e1` / `0000001a` (expect about 5 cm left instead of 15-19), right-hand curves, lane changes, anything feeling close to the right line.
-- If 10 cm looks right, 15 cm.
+- Factor 4.2 over a long drive (curve entry, delivery, straights on shared road with `0000001c` / `0000001d`).
+- Then the shift: 0.15 to 0.19.
 - The replay scripts live outside the repo (`Documents\\DragalPilot\\external\\model-replay-g70`); bring them in if the method is kept.

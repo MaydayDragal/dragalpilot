@@ -1357,3 +1357,8 @@ Details: [docs/findings/2026-11-26-g70-left-lean-model-replay-view-shift.md](doc
 - **A view shift moves it:** the model, shown the car 10 cm further left, plans about 6 cm right within 3 s and asks for 0.048 m/s2 more to the right; symmetric and close to linear.
 - **`8c1c374` (pushed):** `/data/g70_view_shift` (metres, + = car further right). **Installed with 0.10**, reboot; modeld imports with the value. Not driven.
 - **Long drives `0000001c`, `0000001d`** (90 min each, settings of `d4` / `e1`, before the view shift): on 10 shared minutes `0000001d` had twice the slow swings and 40 % more lane movement than `d4` / `e1` with identical settings and calibration; drive-to-drive noise is as large as most effects tested lately. Straights: the controller follows closely, the request is busier. Curves at 45-60 mph: 0.90 of the request delivered, 0.41 s late on entry. **Plan (driver-approved): after a view-shift-only drive, factor 4.5 -> 4.2 over a long drive.** Details: [docs/findings/2026-11-26-g70-long-drives-noise-curve-delivery.md](docs/findings/2026-11-26-g70-long-drives-noise-curve-delivery.md).
+
+## 2026-11-27 (local time): the view shift driven, factor 4.2 set
+
+- **Drives `0000001e`-`00000023`** with the 10 cm view shift. Replay with and without the shift on five highway minutes: the shift was in force (replay with it matches the log within 0.3 cm); **true position 10.1-10.3 cm left of centre, from about 19.** Highway steering quality within the usual spread (`00000022`: lane movement 2.53 cm, slow swings 2.6 per minute).
+- **Device:** factor override 4.5 -> 4.2 (planned curve test), view shift kept at 0.10. Not driven.
